@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
+  AUTO_GLM_ACTION_SETTLE_DELAY_MS,
+  AUTO_GLM_DOUBLE_TAP_INTERVAL_MS,
   buildInputCommand,
   buildInputCommandSequence,
   escapeInputText,
@@ -57,30 +59,64 @@ describe('buildInputCommandSequence', () => {
   it('builds launch commands from package names and app labels', () => {
     expect(buildInputCommandSequence({ action: 'launch', app: 'Settings' })).toEqual([
       ['monkey', '-p', 'com.android.settings', '-c', 'android.intent.category.LAUNCHER', '1'],
+      { waitMs: AUTO_GLM_ACTION_SETTLE_DELAY_MS },
     ])
     expect(buildInputCommandSequence({ action: 'launch', app: 'com.example.app' })).toEqual([
       ['monkey', '-p', 'com.example.app', '-c', 'android.intent.category.LAUNCHER', '1'],
+      { waitMs: AUTO_GLM_ACTION_SETTLE_DELAY_MS },
     ])
   })
 
   it('builds long press and double tap command sequences', () => {
     expect(
       buildInputCommandSequence({ action: 'long_press', x: 10, y: 20, durationMs: 900 }),
-    ).toEqual([['input', 'swipe', '10', '20', '10', '20', '900']])
+    ).toEqual([
+      ['input', 'swipe', '10', '20', '10', '20', '900'],
+      { waitMs: AUTO_GLM_ACTION_SETTLE_DELAY_MS },
+    ])
 
     expect(buildInputCommandSequence({ action: 'double_tap', x: 10, y: 20 })).toEqual([
       ['input', 'tap', '10', '20'],
-      { waitMs: 120 },
+      { waitMs: AUTO_GLM_DOUBLE_TAP_INTERVAL_MS },
       ['input', 'tap', '10', '20'],
+      { waitMs: AUTO_GLM_ACTION_SETTLE_DELAY_MS },
     ])
   })
 
   it('builds back and home commands', () => {
     expect(buildInputCommandSequence({ action: 'back' })).toEqual([
       ['input', 'keyevent', 'KEYCODE_BACK'],
+      { waitMs: AUTO_GLM_ACTION_SETTLE_DELAY_MS },
     ])
     expect(buildInputCommandSequence({ action: 'home' })).toEqual([
       ['input', 'keyevent', 'KEYCODE_HOME'],
+      { waitMs: AUTO_GLM_ACTION_SETTLE_DELAY_MS },
+    ])
+  })
+
+  it('waits for the UI to settle after primitive touch and text actions', () => {
+    expect(buildInputCommandSequence({ action: 'tap', x: 12, y: 34 })).toEqual([
+      ['input', 'tap', '12', '34'],
+      { waitMs: AUTO_GLM_ACTION_SETTLE_DELAY_MS },
+    ])
+
+    expect(
+      buildInputCommandSequence({
+        action: 'swipe',
+        fromX: 1,
+        fromY: 2,
+        toX: 3,
+        toY: 4,
+        durationMs: 500,
+      }),
+    ).toEqual([
+      ['input', 'swipe', '1', '2', '3', '4', '500'],
+      { waitMs: AUTO_GLM_ACTION_SETTLE_DELAY_MS },
+    ])
+
+    expect(buildInputCommandSequence({ action: 'input_text', text: 'hello world' })).toEqual([
+      ['input', 'text', 'hello%sworld'],
+      { waitMs: AUTO_GLM_ACTION_SETTLE_DELAY_MS },
     ])
   })
 })

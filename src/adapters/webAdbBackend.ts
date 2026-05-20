@@ -3,6 +3,7 @@ import AdbWebCredentialStore from '@yume-chan/adb-credential-web'
 import { AdbDaemonWebUsbDeviceManager } from '@yume-chan/adb-daemon-webusb'
 import type { AgentAction } from '../lib/actions'
 import {
+  AUTO_GLM_ACTION_SETTLE_DELAY_MS,
   buildInputCommandSequence,
   bytesToDataUrl,
   delay,
@@ -95,6 +96,7 @@ export class WebAdbDeviceBackend implements DeviceBackend {
     if (action.action === 'input_text' && this.#preferAdbKeyboard) {
       const command = ['am', 'broadcast', '-a', 'ADB_INPUT_TEXT', '--es', 'msg', action.text]
       await this.#requireAdb().subprocess.noneProtocol.spawnWait(command)
+      await delay(AUTO_GLM_ACTION_SETTLE_DELAY_MS)
       return command.join(' ')
     }
 

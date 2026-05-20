@@ -13,6 +13,9 @@ export type DeviceScreenshot = {
 
 export type DeviceCommandStep = readonly string[] | { waitMs: number }
 
+export const AUTO_GLM_ACTION_SETTLE_DELAY_MS = 1000
+export const AUTO_GLM_DOUBLE_TAP_INTERVAL_MS = 100
+
 export type DeviceBackend = {
   connect(): Promise<DeviceInfo>
   disconnect(): Promise<void>
@@ -40,12 +43,14 @@ export function buildInputCommandSequence(action: AgentAction): DeviceCommandSte
       if (!packageName) {
         throw new DeviceBackendError(`No package mapping found for "${action.app}".`)
       }
-      return [['monkey', '-p', packageName, '-c', 'android.intent.category.LAUNCHER', '1']]
+      return withActionSettle([
+        ['monkey', '-p', packageName, '-c', 'android.intent.category.LAUNCHER', '1'],
+      ])
     }
     case 'tap':
-      return [['input', 'tap', String(action.x), String(action.y)]]
+      return withActionSettle([['input', 'tap', String(action.x), String(action.y)]])
     case 'swipe':
-      return [
+      return withActionSettle([
         [
           'input',
           'swipe',
@@ -55,17 +60,17 @@ export function buildInputCommandSequence(action: AgentAction): DeviceCommandSte
           String(action.toY),
           String(action.durationMs ?? 400),
         ],
-      ]
+      ])
     case 'input_text':
-      return [['input', 'text', escapeInputText(action.text)]]
+      return withActionSettle([['input', 'text', escapeInputText(action.text)]])
     case 'key':
-      return [['input', 'keyevent', keyToAndroidKeyCode(action.key)]]
+      return withActionSettle([['input', 'keyevent', keyToAndroidKeyCode(action.key)]])
     case 'back':
-      return [['input', 'keyevent', 'KEYCODE_BACK']]
+      return withActionSettle([['input', 'keyevent', 'KEYCODE_BACK']])
     case 'home':
-      return [['input', 'keyevent', 'KEYCODE_HOME']]
+      return withActionSettle([['input', 'keyevent', 'KEYCODE_HOME']])
     case 'long_press':
-      return [
+      return withActionSettle([
         [
           'input',
           'swipe',
@@ -75,19 +80,23 @@ export function buildInputCommandSequence(action: AgentAction): DeviceCommandSte
           String(action.y),
           String(action.durationMs),
         ],
-      ]
+      ])
     case 'double_tap':
-      return [
+      return withActionSettle([
         ['input', 'tap', String(action.x), String(action.y)],
-        { waitMs: 120 },
+        { waitMs: AUTO_GLM_DOUBLE_TAP_INTERVAL_MS },
         ['input', 'tap', String(action.x), String(action.y)],
-      ]
+      ])
     case 'note':
     case 'take_over':
     case 'wait':
     case 'done':
       return []
   }
+}
+
+function withActionSettle(sequence: DeviceCommandStep[]): DeviceCommandStep[] {
+  return [...sequence, { waitMs: AUTO_GLM_ACTION_SETTLE_DELAY_MS }]
 }
 
 export function escapeInputText(text: string) {
