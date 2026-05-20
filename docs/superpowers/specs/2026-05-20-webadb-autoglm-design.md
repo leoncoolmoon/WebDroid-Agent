@@ -1,12 +1,12 @@
-# WebADB AutoGLM Demo Design
+# WebADB AutoGLM Design
 
 ## Goal
 
-Build a pure frontend demo that connects to one Android device through WebADB, sends screenshots to a user-provided OpenAI-compatible vision model, parses a constrained JSON action, and executes that action in the browser.
+Build a pure frontend app that connects to one Android device through WebADB, sends screenshots to a user-provided OpenAI-compatible vision model, parses a constrained JSON action, and executes that action in the browser.
 
 ## Scope
 
-The demo runs locally in Chromium through Vite. It has no application backend. Users provide `Base URL`, `API Key`, `Model`, and a natural-language task in the UI. API keys are kept in browser state/local storage only for local experimentation.
+The app runs locally in Chromium through Vite. It has no application backend. Users provide `Base URL`, `API Key`, `Model`, and a natural-language task in the UI. API keys are kept in browser state/local storage only for local experimentation.
 
 ## Architecture
 
@@ -32,7 +32,7 @@ Supported actions are `launch`, `tap`, `swipe`, `input_text`, `key`, `back`, `ho
 
 ## Safety Boundaries
 
-Auto-run is optional and defaults off. Manual review shows the next action before execution. A stop button aborts the loop. A max step limit prevents runaway sessions. High-risk use remains out of scope for this demo.
+Auto-run is optional. Manual review shows the next action before execution. A stop button aborts the loop. A max step limit prevents runaway sessions. High-risk use remains out of scope for this app.
 
 ## Constraints
 

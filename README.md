@@ -1,6 +1,6 @@
-# WebADB AutoGLM Demo
+# WebADB AutoGLM
 
-一个完全纯前端的 Android 手机 Agent 演示项目：
+一个完全纯前端的 Android 手机 Agent 项目：
 
 ```text
 Chromium WebUSB -> Tango/WebADB -> Android ADB
@@ -103,7 +103,7 @@ do(action="Launch", app="京东")
 
 ## 安全说明
 
-这个项目是本地 demo。API Key 会保存在浏览器本地存储中，请只在可信设备和本地实验场景使用。
+API Key 会保存在浏览器本地存储中，请只在可信设备和本地实验场景使用。
 
 建议避免让 Agent 操作账号登录、支付、下单、删除、授权、验证码、隐私页面等高风险流程。模型返回 `take_over` 时，自动执行会停止并等待人工接管。
 
@@ -119,7 +119,7 @@ npm run build
 
 项目已创建在 Cloudflare Pages：
 
-- 生产域名：https://webadb-autoglm-demo.pages.dev/
+- 生产域名：https://webadb-autoglm.pages.dev/
 - 部署方式：Wrangler Direct Upload
 
 重新部署：

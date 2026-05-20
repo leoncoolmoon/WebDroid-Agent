@@ -1,8 +1,8 @@
-# WebADB AutoGLM Demo Implementation Plan
+# WebADB AutoGLM Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Build a local pure frontend WebADB + OpenAI-compatible phone-agent demo.
+**Goal:** Build a local pure frontend WebADB + OpenAI-compatible phone-agent app.
 
 **Architecture:** Keep device control, model I/O, action parsing, and UI orchestration separate. Test pure logic first, then wire browser-only WebADB behavior behind a small backend interface.
 

@@ -30,7 +30,7 @@ describe('settings persistence', () => {
     const persisted: AppSettings = {
       modelConfig: {
         baseUrl: 'https://api.example.com/v1',
-        apiKey: 'sk-demo',
+        apiKey: 'sk-test',
         model: 'custom-model',
       },
       task: 'Open Chrome',
@@ -42,7 +42,7 @@ describe('settings persistence', () => {
     expect(
       loadSettings(
         memoryStorage({
-          'webadb-demo-settings': JSON.stringify(persisted),
+          'webadb-autoglm-settings': JSON.stringify(persisted),
         }),
       ),
     ).toEqual(persisted)
@@ -69,13 +69,28 @@ describe('settings persistence', () => {
       ...DEFAULT_SETTINGS,
       modelConfig: {
         baseUrl: 'https://api.example.com/v1',
-        apiKey: 'sk-demo',
+        apiKey: 'sk-test',
         model: 'gpt-5.5',
       },
     }
 
     saveSettings(settings, storage)
 
-    expect(storage.setItem).toHaveBeenCalledWith('webadb-demo-settings', JSON.stringify(settings))
+    expect(storage.setItem).toHaveBeenCalledWith('webadb-autoglm-settings', JSON.stringify(settings))
+  })
+
+  it('keeps old combined settings key as a migration fallback', () => {
+    const persisted: AppSettings = {
+      ...DEFAULT_SETTINGS,
+      task: 'Migrated task',
+    }
+
+    expect(
+      loadSettings(
+        memoryStorage({
+          'webadb-demo-settings': JSON.stringify(persisted),
+        }),
+      ),
+    ).toEqual(persisted)
   })
 })
