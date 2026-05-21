@@ -143,17 +143,19 @@ describe('App run log', () => {
     expect(screen.getByText('6')).toBeTruthy()
   })
 
-  it('cycles and persists the theme mode from the top bar', () => {
+  it('changes and persists the theme mode from settings', async () => {
     render(<App />)
 
     expect(document.documentElement.dataset.theme).toBe('system')
+    expect(screen.queryByRole('button', { name: /theme:/i })).toBeNull()
 
-    fireEvent.click(screen.getByRole('button', { name: /theme: system/i }))
-    expect(screen.getByRole('button', { name: /theme: light/i })).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: /settings/i }))
+
+    const themeSelect = await screen.findByLabelText(/theme/i)
+    fireEvent.change(themeSelect, { target: { value: 'light' } })
     expect(document.documentElement.dataset.theme).toBe('light')
 
-    fireEvent.click(screen.getByRole('button', { name: /theme: light/i }))
-    expect(screen.getByRole('button', { name: /theme: dark/i })).toBeTruthy()
+    fireEvent.change(themeSelect, { target: { value: 'dark' } })
     expect(document.documentElement.dataset.theme).toBe('dark')
 
     expect(localStorage.setItem).toHaveBeenLastCalledWith(

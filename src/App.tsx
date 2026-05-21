@@ -12,7 +12,6 @@ import {
   Loader2,
   MessageSquare,
   Monitor,
-  Moon,
   Plus,
   Play,
   RotateCcw,
@@ -21,7 +20,6 @@ import {
   Settings as SettingsIcon,
   Star,
   StepForward,
-  Sun,
   Usb,
 } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -50,8 +48,6 @@ import { ScreenshotLightbox } from './components/ScreenshotLightbox'
 
 const REPOSITORY_URL = 'https://github.com/yeahhe365/webadb-autoglm'
 const REPOSITORY_API_URL = 'https://api.github.com/repos/yeahhe365/webadb-autoglm'
-const THEME_MODE_SEQUENCE: ThemeMode[] = ['system', 'light', 'dark']
-
 type Locale = 'en-US' | 'zh-CN'
 
 const APP_COPY = {
@@ -237,11 +233,6 @@ function readRepositoryStats(value: unknown): RepositoryStats {
   }
 }
 
-function nextThemeMode(current: ThemeMode): ThemeMode {
-  const currentIndex = THEME_MODE_SEQUENCE.indexOf(current)
-  return THEME_MODE_SEQUENCE[(currentIndex + 1) % THEME_MODE_SEQUENCE.length]
-}
-
 function resolveLocale(languageMode: LanguageMode): Locale {
   if (languageMode === 'zh-CN' || languageMode === 'en-US') {
     return languageMode
@@ -249,26 +240,6 @@ function resolveLocale(languageMode: LanguageMode): Locale {
 
   const browserLanguage = navigator.languages?.[0] ?? navigator.language
   return browserLanguage.toLowerCase().startsWith('zh') ? 'zh-CN' : 'en-US'
-}
-
-function themeModeLabel(themeMode: ThemeMode, copy: AppCopy) {
-  if (themeMode === 'light') {
-    return copy.themeLight
-  }
-  if (themeMode === 'dark') {
-    return copy.themeDark
-  }
-  return copy.themeSystem
-}
-
-function ThemeModeIcon({ themeMode }: { themeMode: ThemeMode }) {
-  if (themeMode === 'light') {
-    return <Sun size={16} />
-  }
-  if (themeMode === 'dark') {
-    return <Moon size={16} />
-  }
-  return <Monitor size={16} />
 }
 
 function pendingActionLabel(action: AgentAction['action'] | undefined, copy: AppCopy) {
@@ -755,16 +726,6 @@ function App() {
               {currentApp}
             </span>
           </div>
-          <button
-            type="button"
-            className="theme-button"
-            onClick={() => setThemeMode((current) => nextThemeMode(current))}
-            aria-label={`${copy.theme}: ${themeModeLabel(themeMode, copy)}`}
-            title={`${copy.theme}: ${themeModeLabel(themeMode, copy)}`}
-          >
-            <ThemeModeIcon themeMode={themeMode} />
-            {themeModeLabel(themeMode, copy)}
-          </button>
           <button type="button" className="settings-button" onClick={() => setAboutOpen(true)}>
             <SettingsIcon size={16} />
             {copy.settings}
@@ -807,6 +768,20 @@ function App() {
                 <option value="system">{copy.languageSystem}</option>
                 <option value="zh-CN">{copy.languageChinese}</option>
                 <option value="en-US">{copy.languageEnglish}</option>
+              </select>
+            </label>
+            <label className="settings-field">
+              <span>
+                <Monitor size={16} />
+                {copy.theme}
+              </span>
+              <select
+                value={themeMode}
+                onChange={(event) => setThemeMode(event.target.value as ThemeMode)}
+              >
+                <option value="system">{copy.themeSystem}</option>
+                <option value="light">{copy.themeLight}</option>
+                <option value="dark">{copy.themeDark}</option>
               </select>
             </label>
             <p className="about-copy">{copy.aboutCopy}</p>
