@@ -1,8 +1,13 @@
-<div align="left">
-  <img src="./public/webdroid-agent-logo.png" alt="WebDroid Agent logo" width="72" align="left" />
-  <h1>WebDroid Agent</h1>
-</div>
-<br clear="left" />
+<table>
+  <tr>
+    <td width="82">
+      <img src="./public/webdroid-agent-logo.png" alt="WebDroid Agent logo" width="72" />
+    </td>
+    <td>
+      <strong>WebDroid Agent</strong>
+    </td>
+  </tr>
+</table>
 
 <p align="center">
   <a href="./README.md">中文</a> | <a href="./README.en-US.md">English</a>
