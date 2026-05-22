@@ -112,6 +112,62 @@ describe('buildChatCompletionPayload', () => {
     expect(userText).toContain('monkey -p com.android.chrome')
   })
 
+  it('includes app card guidance in the user context', () => {
+    const payload = buildChatCompletionPayload({
+      model: 'agent-model',
+      task: 'Search the web',
+      screenshotDataUrl: 'data:image/png;base64,abc123',
+      screen: { width: 1080, height: 2400 },
+      currentApp: 'Chrome',
+      deviceState: {
+        app: 'Chrome',
+        packageName: 'com.android.chrome',
+      },
+      appCard: '# Chrome App Card\n- Use the address bar for searches.',
+      promptMode: 'canonical-json',
+    })
+
+    const userMessage = payload.messages[1]
+    if (
+      userMessage.role !== 'user' ||
+      !Array.isArray(userMessage.content) ||
+      userMessage.content[0].type !== 'text'
+    ) {
+      throw new Error('Expected first user content item to be text.')
+    }
+
+    expect(userMessage.content[0].text).toContain('<app_card>')
+    expect(userMessage.content[0].text).toContain('Chrome App Card')
+    expect(userMessage.content[0].text).toContain('address bar')
+  })
+
+  it('includes installed launchable apps in the user context', () => {
+    const payload = buildChatCompletionPayload({
+      model: 'agent-model',
+      task: '打开邮箱',
+      screenshotDataUrl: 'data:image/png;base64,abc123',
+      screen: { width: 1080, height: 2400 },
+      installedApps: [
+        { label: 'Gmail', packageName: 'com.google.android.gm' },
+        { packageName: 'com.android.chrome' },
+      ],
+      promptMode: 'canonical-json',
+    })
+
+    const userMessage = payload.messages[1]
+    if (
+      userMessage.role !== 'user' ||
+      !Array.isArray(userMessage.content) ||
+      userMessage.content[0].type !== 'text'
+    ) {
+      throw new Error('Expected first user content item to be text.')
+    }
+
+    expect(userMessage.content[0].text).toContain('<installed_apps>')
+    expect(userMessage.content[0].text).toContain('Gmail: com.google.android.gm')
+    expect(userMessage.content[0].text).toContain('chrome: com.android.chrome')
+  })
+
   it('preserves conversation messages and injects current context into the latest user turn', () => {
     const payload = buildChatCompletionPayload({
       model: 'agent-model',
@@ -276,5 +332,40 @@ describe('createOpenAiClient', () => {
     })
 
     expect(text).toBe('{"action":"done"}')
+  })
+
+  it('sends invalid action output and validation errors when repairing an action', async () => {
+    const fetcher = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        choices: [{ message: { content: '{"action":"tap","x":100,"y":200}' } }],
+      }),
+    })) as unknown as typeof fetch
+    const client = createOpenAiClient(fetcher)
+
+    const text = await client.repairAction?.({
+      baseUrl: 'https://api.example.com/v1/',
+      apiKey: 'secret',
+      model: 'agent-model',
+      stream: true,
+      task: 'Open Settings',
+      screenshotDataUrl: 'data:image/png;base64,abc123',
+      screen: { width: 1080, height: 2400 },
+      promptMode: 'canonical-json',
+      invalidOutput: '{"action":"tap","x":9999,"y":200}',
+      validationError: 'Point is outside the current screen.',
+    })
+
+    expect(text).toBe('{"action":"tap","x":100,"y":200}')
+    const requestBody = JSON.parse(String(vi.mocked(fetcher).mock.calls[0][1]?.body))
+    expect(requestBody.stream).toBeUndefined()
+    expect(requestBody.response_format).toEqual({ type: 'json_object' })
+    expect(requestBody.messages[1].content[0].text).toContain('Repair only the action output')
+    expect(requestBody.messages[1].content[0].text).toContain(
+      '{"action":"tap","x":9999,"y":200}',
+    )
+    expect(requestBody.messages[1].content[0].text).toContain(
+      'Point is outside the current screen.',
+    )
   })
 })

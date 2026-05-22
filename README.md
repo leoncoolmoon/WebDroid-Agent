@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="./public/webdroid-agent-logo.png" alt="WebDroid Agent logo" width="96" />
+</p>
+
 # WebDroid Agent
 
 <p align="center">
@@ -240,19 +244,29 @@ Open-AutoGLM 风格坐标使用 `0-1000` 的相对坐标空间；canonical JSON 
 ```text
 src/
   adapters/
+    appPackages.ts            # 常见 App 名称和包名映射
     deviceBackend.ts          # 设备后端接口
     webAdbBackend.ts          # WebADB/WebUSB 实现
     screenshotPreprocess.ts   # 截图预处理
   components/
+    DevicePanel.tsx           # 设备连接和执行设置面板
+    ModelPanel.tsx            # 模型配置面板
+    PhoneStage.tsx            # 手机截图和动作覆盖层
     RunLog.tsx                # 运行日志
+    RunPanel.tsx              # 聊天、运行控制和待执行动作
+    ScreenshotLightbox.tsx    # 截图预览弹窗
+    SettingsDialog.tsx        # 应用设置和仓库信息
   lib/
     actions.ts                # 动作解析、规范化和校验
     agent.ts                  # Agent 循环调度
+    appCopy.ts                # 双语界面文案
     openAiClient.ts           # OpenAI 兼容请求构造与响应读取
     prompts.ts                # 提示词和动作规则
+    repository.ts             # 仓库链接和 GitHub 统计解析
     screenshotCoordinates.ts  # 截图坐标映射
     settings.ts               # 本地设置读写
-  App.tsx                     # 页面状态和主交互
+  styles/                     # 按页面区域拆分的样式
+  App.tsx                     # 页面状态、业务流程和组件编排
 ```
 
 ## 验证
@@ -270,7 +284,7 @@ npm run build
 - Agent 单步和连续执行流程。
 - 设置持久化和兼容迁移。
 - 截图坐标映射。
-- 运行日志组件。
+- 运行日志、截图预览和主界面布局组件。
 
 真实设备控制仍需要连接 Android 设备进行手动验证。
 
@@ -309,7 +323,7 @@ npm run build
 
 项目已创建在 Cloudflare Pages：
 
-- 线上地址：https://webadb-autoglm.pages.dev/
+- 线上地址（历史 Pages 域名）：https://webadb-autoglm.pages.dev/
 - 部署方式：GitHub 绑定自动部署
 
 重新部署：

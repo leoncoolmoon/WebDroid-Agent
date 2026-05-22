@@ -23,6 +23,7 @@ export type AppSettings = {
 export type SettingsStorage = Pick<Storage, 'getItem' | 'setItem'>
 
 const SETTINGS_KEY = 'webdroid-agent-settings'
+// Keep the previous project keys so existing browser settings survive the rename to WebDroid Agent.
 const LEGACY_PROJECT_SETTINGS_KEY = 'webadb-autoglm-settings'
 const LEGACY_SETTINGS_KEY = 'webadb-demo-settings'
 const LEGACY_BASE_URL_KEY = 'webadb-demo-base-url'

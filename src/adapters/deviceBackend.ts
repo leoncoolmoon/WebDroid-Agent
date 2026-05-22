@@ -1,4 +1,7 @@
 import type { AgentAction, KeyAction, ScreenSize } from '../lib/actions'
+import { resolveAppNameFromPackage, resolveAppPackage } from './appPackages'
+
+export { resolveAppNameFromPackage, resolveAppPackage } from './appPackages'
 
 export type DeviceInfo = {
   serial: string
@@ -22,6 +25,12 @@ export type DeviceState = {
   keyboard?: string
 }
 
+export type InstalledApp = {
+  packageName: string
+  activity?: string
+  label?: string
+}
+
 export type DeviceCommandStep = readonly string[] | { waitMs: number }
 
 export type ExecuteActionOptions = {
@@ -34,9 +43,21 @@ export type DeviceTimingConfig = {
   keyboardStepMs: number
 }
 
+export type DeviceRetryOptions = {
+  label: string
+  maxAttempts?: number
+  retryDelaysMs?: readonly number[]
+  recoverAfterAttempt?: number
+  recover?: (error: unknown, attempt: number) => Promise<void> | void
+  wait?: (ms: number) => Promise<void>
+  shouldRetry?: (error: unknown, attempt: number) => boolean
+}
+
 export const AUTO_GLM_ACTION_SETTLE_DELAY_MS = 1000
 export const AUTO_GLM_DOUBLE_TAP_INTERVAL_MS = 100
 export const AUTO_GLM_KEYBOARD_STEP_DELAY_MS = 1000
+export const DEFAULT_DEVICE_READ_RETRY_DELAYS_MS = [250, 750, 1500] as const
+export const DEFAULT_DEVICE_READ_MAX_ATTEMPTS = 4
 export const ADB_KEYBOARD_IME = 'com.android.adbkeyboard/.AdbIME'
 export const DEFAULT_DEVICE_TIMING: DeviceTimingConfig = {
   actionSettleMs: AUTO_GLM_ACTION_SETTLE_DELAY_MS,
@@ -50,6 +71,8 @@ export type DeviceBackend = {
   screenshot(): Promise<DeviceScreenshot>
   getCurrentApp(): Promise<string>
   getDeviceState(): Promise<DeviceState>
+  getInputMethods?(): Promise<string>
+  getInstalledApps?(): Promise<InstalledApp[]>
   execute(action: AgentAction, options?: ExecuteActionOptions): Promise<string>
 }
 
@@ -58,6 +81,57 @@ export class DeviceBackendError extends Error {
     super(message)
     this.name = 'DeviceBackendError'
   }
+}
+
+export async function retryDeviceOperation<T>(
+  operation: () => Promise<T>,
+  {
+    label,
+    maxAttempts = DEFAULT_DEVICE_READ_MAX_ATTEMPTS,
+    retryDelaysMs = DEFAULT_DEVICE_READ_RETRY_DELAYS_MS,
+    recoverAfterAttempt,
+    recover,
+    wait = delay,
+    shouldRetry,
+  }: DeviceRetryOptions,
+): Promise<T> {
+  let lastError: unknown
+  let recoveryAttempted = false
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      return await operation()
+    } catch (caught) {
+      lastError = caught
+      const isLastAttempt = attempt >= maxAttempts
+      if (isLastAttempt || shouldRetry?.(caught, attempt) === false) {
+        break
+      }
+
+      if (
+        recover &&
+        recoverAfterAttempt !== undefined &&
+        attempt >= recoverAfterAttempt &&
+        !recoveryAttempted
+      ) {
+        recoveryAttempted = true
+        try {
+          await recover(caught, attempt)
+        } catch {
+          // Recovery is best-effort; preserve the original read error.
+        }
+      }
+
+      const delayMs = retryDelaysMs[Math.min(attempt - 1, retryDelaysMs.length - 1)] ?? 0
+      if (delayMs > 0) {
+        await wait(delayMs)
+      }
+    }
+  }
+
+  throw new DeviceBackendError(
+    `Failed to get ${label} after ${maxAttempts} attempts: ${describeError(lastError)}`,
+  )
 }
 
 export function buildInputCommand(action: AgentAction): readonly string[] | null {
@@ -69,10 +143,14 @@ export function buildInputCommand(action: AgentAction): readonly string[] | null
 export function buildInputCommandSequence(
   action: AgentAction,
   timing: DeviceTimingConfig = DEFAULT_DEVICE_TIMING,
+  installedApps?: readonly InstalledApp[],
 ): DeviceCommandStep[] {
   switch (action.action) {
     case 'launch': {
-      const packageName = action.packageName ?? resolveAppPackage(action.app)
+      const packageName =
+        action.packageName ??
+        resolveInstalledAppPackage(action.app, installedApps) ??
+        resolveAppPackage(action.app)
       if (!packageName) {
         throw new DeviceBackendError(`No package mapping found for "${action.app}".`)
       }
@@ -228,13 +306,97 @@ export async function assertSensitiveActionConfirmed(
   }
 }
 
-export function resolveAppPackage(app: string): string | undefined {
-  const direct = app.trim()
-  if (direct.includes('.')) {
-    return direct
+export function parseInstalledAppsFromPackageOutput(output: string): InstalledApp[] {
+  const apps: InstalledApp[] = []
+  let current: Partial<InstalledApp> = {}
+
+  for (const rawLine of output.split('\n')) {
+    const line = rawLine.trim()
+    if (!line) {
+      continue
+    }
+
+    if (/^ResolveInfo\b/.test(line)) {
+      pushInstalledApp(apps, current)
+      current = {}
+      continue
+    }
+
+    const component = parseComponentLine(line)
+    if (component) {
+      pushInstalledApp(apps, current)
+      current = {}
+      pushInstalledApp(apps, component)
+      continue
+    }
+
+    const packageListMatch = line.match(/^package:([a-zA-Z][\w]*(?:\.[\w]+)+)$/)
+    if (packageListMatch) {
+      pushInstalledApp(apps, current)
+      current = {}
+      pushInstalledApp(apps, { packageName: packageListMatch[1] })
+      continue
+    }
+
+    const packageMatch = line.match(/\bpackageName=([a-zA-Z][\w]*(?:\.[\w]+)+)\b/)
+    if (packageMatch) {
+      if (current.packageName) {
+        pushInstalledApp(apps, current)
+        current = {}
+      }
+      current.packageName = packageMatch[1]
+      continue
+    }
+
+    const nameMatch = line.match(/\bname=([^\s]+)/)
+    if (nameMatch) {
+      current.activity = nameMatch[1]
+      continue
+    }
+
+    const labelMatch = line.match(/\bnonLocalizedLabel=(.+)$/)
+    if (labelMatch) {
+      const label = labelMatch[1].trim()
+      if (label && label !== 'null') {
+        current.label = stripQuotes(label)
+      }
+    }
   }
 
-  return APP_PACKAGES[normalizeAppName(direct)]
+  pushInstalledApp(apps, current)
+  return mergeInstalledApps(apps)
+}
+
+export function resolveInstalledAppPackage(
+  app: string,
+  installedApps: readonly InstalledApp[] = [],
+): string | undefined {
+  const requested = app.trim()
+  if (!requested) {
+    return undefined
+  }
+
+  const exactPackage = installedApps.find((candidate) => candidate.packageName === requested)
+  if (exactPackage) {
+    return exactPackage.packageName
+  }
+
+  const staticPackage = resolveAppPackage(requested)
+  if (staticPackage && hasInstalledPackage(installedApps, staticPackage)) {
+    return staticPackage
+  }
+
+  const requestedKey = normalizeAppToken(requested)
+  const scored = installedApps
+    .map((candidate, index) => ({
+      candidate,
+      score: scoreInstalledAppMatch(requestedKey, candidate),
+      index,
+    }))
+    .filter((match) => match.score > 0)
+    .sort((left, right) => right.score - left.score || left.index - right.index)
+
+  return scored[0]?.candidate.packageName
 }
 
 export function parseCurrentAppFromDumpsys(output: string) {
@@ -258,10 +420,6 @@ export function parseDeviceStateFromDumpsys(output: string): DeviceState {
     activity: focus.activity,
     orientation: parseOrientation(output),
   }
-}
-
-export function resolveAppNameFromPackage(packageName: string) {
-  return APP_PACKAGE_NAMES[packageName]
 }
 
 export function parsePngSize(bytes: Uint8Array): ScreenSize {
@@ -291,69 +449,89 @@ export function delay(ms: number) {
   return new Promise<void>((resolve) => globalThis.setTimeout(resolve, ms))
 }
 
-const APP_PACKAGES: Record<string, string> = {
-  alipay: 'com.eg.android.AlipayGphone',
-  amazon: 'com.amazon.mShop.android.shopping',
-  bilibili: 'tv.danmaku.bili',
-  calendar: 'com.google.android.calendar',
-  calculator: 'com.google.android.calculator',
-  camera: 'com.android.camera',
-  chrome: 'com.android.chrome',
-  clock: 'com.google.android.deskclock',
-  contacts: 'com.google.android.contacts',
-  douyin: 'com.ss.android.ugc.aweme',
-  ebay: 'com.ebay.mobile',
-  files: 'com.google.android.documentsui',
-  gmail: 'com.google.android.gm',
-  googlemaps: 'com.google.android.apps.maps',
-  instagram: 'com.instagram.android',
-  jd: 'com.jingdong.app.mall',
-  jdcom: 'com.jingdong.app.mall',
-  maps: 'com.google.android.apps.maps',
-  messages: 'com.google.android.apps.messaging',
-  phone: 'com.google.android.dialer',
-  photos: 'com.google.android.apps.photos',
-  playstore: 'com.android.vending',
-  pinduoduo: 'com.xunmeng.pinduoduo',
-  qq: 'com.tencent.mobileqq',
-  reddit: 'com.reddit.frontpage',
-  settings: 'com.android.settings',
-  taobao: 'com.taobao.taobao',
-  telegram: 'org.telegram.messenger',
-  tiktok: 'com.zhiliaoapp.musically',
-  twitter: 'com.twitter.android',
-  wechat: 'com.tencent.mm',
-  whatsapp: 'com.whatsapp',
-  x: 'com.twitter.android',
-  xiaohongshu: 'com.xingin.xhs',
-  youtube: 'com.google.android.youtube',
-  zhihu: 'com.zhihu.android',
-  京东: 'com.jingdong.app.mall',
-  微信: 'com.tencent.mm',
-  淘宝: 'com.taobao.taobao',
-  支付宝: 'com.eg.android.AlipayGphone',
-  抖音: 'com.ss.android.ugc.aweme',
-  小红书: 'com.xingin.xhs',
-  拼多多: 'com.xunmeng.pinduoduo',
-  知乎: 'com.zhihu.android',
-  微博: 'com.sina.weibo',
-  美团: 'com.sankuai.meituan',
-  饿了么: 'me.ele',
-  高德地图: 'com.autonavi.minimap',
-  百度地图: 'com.baidu.BaiduMap',
-  网易云音乐: 'com.netease.cloudmusic',
+function describeError(error: unknown) {
+  if (error instanceof Error && error.message) {
+    return error.message
+  }
+  if (typeof error === 'string' && error.trim()) {
+    return error.trim()
+  }
+  return String(error || 'unknown error')
 }
 
-const APP_PACKAGE_NAMES = Object.entries(APP_PACKAGES).reduce<Record<string, string>>(
-  (names, [name, packageName]) => {
-    names[packageName] = name
-    return names
-  },
-  {},
-)
+function pushInstalledApp(apps: InstalledApp[], app: Partial<InstalledApp>) {
+  if (!app.packageName) {
+    return
+  }
 
-function normalizeAppName(value: string) {
+  apps.push({
+    packageName: app.packageName,
+    ...(app.activity ? { activity: app.activity } : {}),
+    ...(app.label ? { label: app.label } : {}),
+  })
+}
+
+function mergeInstalledApps(apps: readonly InstalledApp[]) {
+  const merged = new Map<string, InstalledApp>()
+  for (const app of apps) {
+    const existing = merged.get(app.packageName)
+    merged.set(app.packageName, {
+      packageName: app.packageName,
+      activity: existing?.activity ?? app.activity,
+      label: existing?.label ?? app.label,
+    })
+  }
+  return [...merged.values()]
+}
+
+function parseComponentLine(line: string): InstalledApp | null {
+  const match = line.match(/\b([a-zA-Z][\w]*(?:\.[\w]+)+)\/([^\s}]+)/)
+  if (!match) {
+    return null
+  }
+
+  return {
+    packageName: match[1],
+    activity: match[2],
+  }
+}
+
+function hasInstalledPackage(installedApps: readonly InstalledApp[], packageName: string) {
+  return installedApps.length === 0 || installedApps.some((app) => app.packageName === packageName)
+}
+
+function scoreInstalledAppMatch(query: string, app: InstalledApp) {
+  const tokens = installedAppTokens(app)
+  if (tokens.some((token) => token === query)) {
+    return 100
+  }
+  if (tokens.some((token) => token.endsWith(query))) {
+    return 75
+  }
+  if (query.length >= 3 && tokens.some((token) => token.includes(query))) {
+    return 50
+  }
+  return 0
+}
+
+function installedAppTokens(app: InstalledApp) {
+  const packageParts = app.packageName.split('.')
+  return [
+    app.label,
+    resolveAppNameFromPackage(app.packageName),
+    app.packageName,
+    packageParts.at(-1),
+  ]
+    .filter((value): value is string => Boolean(value))
+    .map(normalizeAppToken)
+}
+
+function normalizeAppToken(value: string) {
   return value.toLowerCase().replace(/[\s._-]+/g, '')
+}
+
+function stripQuotes(value: string) {
+  return value.replace(/^['"]|['"]$/g, '')
 }
 
 function parseFocusedComponent(output: string): { packageName: string; activity?: string } | null {

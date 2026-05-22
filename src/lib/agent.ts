@@ -3,8 +3,10 @@ import type {
   DeviceScreenshot,
   DeviceState,
   ExecuteActionOptions,
+  InstalledApp,
 } from '../adapters/deviceBackend'
 import { type AgentAction, buildActionPreview, parseModelAction } from './actions'
+import { resolveAppCard } from './appCards'
 import type {
   AgentConversationMessage,
   AgentHistoryItem,
@@ -200,14 +202,15 @@ export async function runAgentStep({
   const deviceState = await getDeviceStateOrUnknown(device)
   const currentApp = deviceState.app
   const currentAppMs = elapsed(currentAppStartedAt)
-  const modelStartedAt = now()
   const modelScreenshot = modelScreenshotView(screenshot)
+  const installedApps = await getInstalledAppsOrEmpty(device)
+  const modelStartedAt = now()
   if (session) {
     session.stepNumber = index
     updateSessionDeviceSnapshot(session, { currentApp, deviceState, screenshot })
     drainPendingUserMessages(session)
   }
-  const modelOutput = await client.completeAction({
+  const completionRequest = {
     ...modelConfig,
     task,
     conversation: session?.messages,
@@ -217,16 +220,38 @@ export async function runAgentStep({
     currentApp,
     deviceState,
     history: session?.history ?? [],
+    appCard: resolveAppCard(deviceState.packageName),
+    installedApps,
     promptMode,
-  })
+  }
+  let modelOutput = await client.completeAction(completionRequest)
+  let modelMs = elapsed(modelStartedAt)
+  let parseStartedAt = now()
+  let action = parseActionOrError(modelOutput, modelScreenshot.screen)
+  let parseMs = elapsed(parseStartedAt)
+
+  if (action instanceof Error) {
+    if (!client.repairAction) {
+      throw action
+    }
+
+    const repairStartedAt = now()
+    modelOutput = await client.repairAction({
+      ...completionRequest,
+      invalidOutput: modelOutput,
+      validationError: action.message,
+    })
+    modelMs += elapsed(repairStartedAt)
+
+    parseStartedAt = now()
+    action = parseModelAction(modelOutput, modelScreenshot.screen)
+    parseMs += elapsed(parseStartedAt)
+  }
+
   if (session) {
     session.messages.push(createConversationMessage('assistant', modelOutput))
   }
-  const modelMs = elapsed(modelStartedAt)
-  const parseStartedAt = now()
-  const action = parseModelAction(modelOutput, modelScreenshot.screen)
   const executionAction = mapActionCoordinates(action, modelScreenshot.screen, screenshot.screen)
-  const parseMs = elapsed(parseStartedAt)
 
   return {
     index,
@@ -244,6 +269,14 @@ export async function runAgentStep({
       parseMs,
       totalMs: elapsed(startedAt),
     },
+  }
+}
+
+function parseActionOrError(raw: string, screen: DeviceScreenshot['screen']) {
+  try {
+    return parseModelAction(raw, screen)
+  } catch (caught) {
+    return caught instanceof Error ? caught : new Error(String(caught))
   }
 }
 
@@ -408,5 +441,17 @@ async function getDeviceStateOrUnknown(device: DeviceBackend): Promise<DeviceSta
     return await device.getDeviceState()
   } catch {
     return { app: 'Unknown' }
+  }
+}
+
+async function getInstalledAppsOrEmpty(device: DeviceBackend): Promise<InstalledApp[]> {
+  if (!device.getInstalledApps) {
+    return []
+  }
+
+  try {
+    return await device.getInstalledApps()
+  } catch {
+    return []
   }
 }

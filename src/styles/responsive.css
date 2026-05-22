@@ -1,0 +1,56 @@
+@media (max-width: 1120px) {
+  .app-shell {
+    padding: 16px;
+  }
+
+  .timing-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .phone-stage {
+    min-height: 560px;
+  }
+
+  .phone-frame {
+    max-height: 68vh;
+  }
+}
+
+@media (max-width: 760px) {
+  .topbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .status-strip,
+  .topbar-actions {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 940px) {
+  .workspace {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .log-entry-body {
+    grid-template-columns: 1fr;
+    row-gap: 8px;
+  }
+
+  .log-entry-media {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 620px) {
+  .settings-page {
+    padding: 12px;
+  }
+
+  .repository-stats {
+    grid-template-columns: 1fr;
+  }
+}

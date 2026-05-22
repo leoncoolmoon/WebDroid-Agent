@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="./public/webdroid-agent-logo.png" alt="WebDroid Agent logo" width="96" />
+</p>
+
 # WebDroid Agent
 
 WebDroid Agent is a fully frontend Android phone agent experiment. It connects to an Android device from the browser through WebUSB/WebADB, captures the device screen, sends it to an OpenAI-compatible vision model, then parses, validates, and executes the model's constrained action through ADB.
@@ -190,19 +194,29 @@ It is still strongly recommended to avoid letting the agent handle account login
 ```text
 src/
   adapters/
+    appPackages.ts            # common app-name to package-name mappings
     deviceBackend.ts          # device backend interface
     webAdbBackend.ts          # WebADB/WebUSB implementation
     screenshotPreprocess.ts   # screenshot preprocessing
   components/
+    DevicePanel.tsx           # device connection and execution settings panel
+    ModelPanel.tsx            # model configuration panel
+    PhoneStage.tsx            # phone screenshot and action overlay
     RunLog.tsx                # run log view
+    RunPanel.tsx              # chat, run controls, and pending action view
+    ScreenshotLightbox.tsx    # screenshot preview modal
+    SettingsDialog.tsx        # app settings and repository information
   lib/
     actions.ts                # action parsing, normalization, and validation
     agent.ts                  # agent loop orchestration
+    appCopy.ts                # localized UI copy
     openAiClient.ts           # OpenAI-compatible request building and response reading
     prompts.ts                # prompts and action rules
+    repository.ts             # repository links and GitHub stats parsing
     screenshotCoordinates.ts  # screenshot coordinate mapping
     settings.ts               # local settings persistence
-  App.tsx                     # main page state and interaction
+  styles/                     # styles split by page area
+  App.tsx                     # page state, workflow logic, and component composition
 ```
 
 ## Verification
@@ -220,7 +234,7 @@ The current tests mainly cover:
 - Single-step and continuous agent execution.
 - Settings persistence and compatibility migration.
 - Screenshot coordinate mapping.
-- The run-log component.
+- The run-log, screenshot preview, and main layout components.
 
 Real-device control still needs manual verification with an Android device.
 
@@ -228,7 +242,7 @@ Real-device control still needs manual verification with an Android device.
 
 The project is already set up on Cloudflare Pages:
 
-- Live site: https://webadb-autoglm.pages.dev/
+- Live site (legacy Pages hostname): https://webadb-autoglm.pages.dev/
 - Deployment method: automatic deployment from GitHub
 
 Redeploy:

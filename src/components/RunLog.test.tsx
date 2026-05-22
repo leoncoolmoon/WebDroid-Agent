@@ -98,4 +98,38 @@ describe('RunLog', () => {
     expect(body?.contains(media as Element)).toBe(true)
     expect(media?.contains(screen.getByAltText('Screenshot for Screen captured'))).toBe(true)
   })
+
+  it('renders step timeline metadata in one log entry', () => {
+    const logs: LogEntry[] = [
+      {
+        id: 1,
+        time: '10:30:00',
+        tone: 'ok',
+        title: 'Step 2: tap (100, 200)',
+        timeline: {
+          step: 2,
+          currentApp: 'Chrome',
+          packageName: 'com.android.chrome',
+          modelOutput: '{"action":"tap","x":100,"y":200}',
+          actionPreview: 'tap (100, 200)',
+          executionActionPreview: 'tap (100, 200)',
+          executionResult: 'input tap 100 200',
+        },
+        screenshot: {
+          dataUrl: 'data:image/png;base64,abc123',
+          screen: { width: 955, height: 2048 },
+        },
+      },
+    ]
+
+    render(<RunLog logs={logs} onClear={vi.fn()} />)
+
+    expect(screen.getByText('Step 2')).toBeTruthy()
+    expect(screen.getByText('Chrome')).toBeTruthy()
+    expect(screen.getByText('com.android.chrome')).toBeTruthy()
+    expect(screen.getByText('Model output')).toBeTruthy()
+    expect(screen.getByText('Parsed action')).toBeTruthy()
+    expect(screen.getByText('Execution result')).toBeTruthy()
+    expect(screen.getByText('input tap 100 200')).toBeTruthy()
+  })
 })

@@ -1,0 +1,68 @@
+.screenshot-modal {
+  align-items: center;
+  background: rgba(17, 24, 29, 0.72);
+  bottom: 0;
+  display: flex;
+  justify-content: center;
+  left: 0;
+  padding: 24px;
+  position: fixed;
+  right: 0;
+  top: 0;
+  z-index: 30;
+}
+
+.screenshot-modal-panel {
+  background: var(--phone-screen);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  box-shadow: 0 24px 72px rgba(0, 0, 0, 0.4);
+  display: grid;
+  gap: 14px;
+  max-height: 92vh;
+  max-width: min(92vw, 1240px);
+  padding: 14px;
+  width: 100%;
+}
+
+.screenshot-modal-header {
+  align-items: center;
+  color: var(--modal-text);
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.screenshot-modal-header strong {
+  display: block;
+  font-size: 14px;
+}
+
+.screenshot-modal-header small {
+  color: #9fb0bc;
+}
+
+.screenshot-modal-close {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: var(--modal-text);
+  flex: 0 0 auto;
+  height: 36px;
+  width: 36px;
+}
+
+.screenshot-modal-viewport {
+  height: calc(92vh - 92px);
+  overflow: auto;
+  text-align: center;
+}
+
+.screenshot-modal-viewport img {
+  background: #0c1115;
+  display: block;
+  margin: 0 auto;
+  max-width: none;
+  object-fit: contain;
+  transition: height 80ms ease-out;
+  width: auto;
+}

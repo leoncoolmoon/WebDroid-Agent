@@ -1,4 +1,4 @@
-import type { DeviceState } from '../adapters/deviceBackend'
+import type { DeviceState, InstalledApp } from '../adapters/deviceBackend'
 import type { ScreenSize } from './actions'
 import { buildSystemPrompt, type PromptMode } from './prompts'
 import { buildScreenshotContext } from './screenshotCoordinates'
@@ -19,7 +19,14 @@ export type CompletionRequest = ModelConfig & {
   currentApp?: string
   deviceState?: DeviceState
   history?: readonly AgentHistoryItem[]
+  appCard?: string
+  installedApps?: readonly InstalledApp[]
   promptMode: PromptMode
+}
+
+export type RepairActionRequest = CompletionRequest & {
+  invalidOutput: string
+  validationError: string
 }
 
 export type AgentHistoryItem = {
@@ -77,6 +84,7 @@ export type ChatCompletionPayload = {
 
 export type OpenAiClient = {
   completeAction(request: CompletionRequest): Promise<string>
+  repairAction?(request: RepairActionRequest): Promise<string>
 }
 
 export class OpenAiClientError extends Error {
@@ -100,6 +108,8 @@ export function buildChatCompletionPayload({
   currentApp,
   deviceState,
   history = [],
+  appCard,
+  installedApps,
   promptMode,
   stream,
 }: Pick<
@@ -113,6 +123,8 @@ export function buildChatCompletionPayload({
   | 'currentApp'
   | 'deviceState'
   | 'history'
+  | 'appCard'
+  | 'installedApps'
   | 'promptMode'
   | 'stream'
 >): ChatCompletionPayload {
@@ -130,6 +142,8 @@ export function buildChatCompletionPayload({
     currentApp,
     deviceState,
     history,
+    appCard,
+    installedApps,
     promptMode,
     latestUserMessage: latestUserMessage(conversation),
   })
@@ -184,6 +198,8 @@ function buildUserContext({
   currentApp,
   deviceState,
   history,
+  appCard,
+  installedApps,
   promptMode,
   latestUserMessage,
 }: Pick<
@@ -194,6 +210,8 @@ function buildUserContext({
   | 'currentApp'
   | 'deviceState'
   | 'history'
+  | 'appCard'
+  | 'installedApps'
   | 'promptMode'
 > & {
   latestUserMessage?: string
@@ -212,14 +230,22 @@ function buildUserContext({
         }
       : buildScreenshotContext({ modelScreen: screen, deviceScreen })),
   })
+  const canonicalCoordinateInstruction = [
+    'Coordinates use pixels in the attached screenshot.',
+    'Use numeric x/y labels on major grid lines as anchors; do not answer with grid-cell numbers.',
+    'Your screenshot coordinates are mapped back to native device pixels before execution.',
+  ].join(' ')
+
   const lines = [
     `Task: ${task}`,
     latestUserMessage ? `Latest user message: ${latestUserMessage}` : null,
     `Screen Info: ${screenInfo}`,
+    appCard ? `<app_card>\n${appCard}\n</app_card>` : null,
+    formatInstalledApps(installedApps),
     'Treat the latest user message as the current instruction. Use earlier messages and observations only as context.',
     promptMode === 'autoglm-native'
       ? 'Coordinates in actions should use Open-AutoGLM relative coordinates from 0 to 1000.'
-      : 'Coordinates use pixels in the attached screenshot. Use numeric x/y labels on major grid lines as anchors; do not answer with grid-cell numbers. Your screenshot coordinates are mapped back to native device pixels before execution.',
+      : canonicalCoordinateInstruction,
   ].filter(Boolean) as string[]
 
   if (historyEntries.length > 0) {
@@ -239,6 +265,23 @@ function buildUserContext({
   }
 
   return lines.join('\n')
+}
+
+function formatInstalledApps(installedApps?: readonly InstalledApp[]) {
+  const apps = installedApps?.filter((app) => app.packageName.trim()) ?? []
+  if (apps.length === 0) {
+    return null
+  }
+
+  const lines = apps
+    .slice(0, 40)
+    .map((app) => `${app.label?.trim() || fallbackAppLabel(app.packageName)}: ${app.packageName}`)
+
+  return [`<installed_apps>`, ...lines, `</installed_apps>`].join('\n')
+}
+
+function fallbackAppLabel(packageName: string) {
+  return packageName.split('.').at(-1) || packageName
 }
 
 function multimodalUserMessage(text: string, screenshotDataUrl: string): ChatMessage {
@@ -334,36 +377,61 @@ export function extractAssistantText(response: unknown): string {
 }
 
 export function createOpenAiClient(fetcher: typeof fetch = fetch): OpenAiClient {
-  return {
-    async completeAction(request) {
-      const url = `${normalizeBaseUrl(request.baseUrl)}/chat/completions`
-      const payload = buildChatCompletionPayload(request)
-      const response = await fetcher(url, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${request.apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      })
+  async function completeAction(request: CompletionRequest) {
+    const url = `${normalizeBaseUrl(request.baseUrl)}/chat/completions`
+    const payload = buildChatCompletionPayload(request)
+    const response = await fetcher(url, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${request.apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    })
 
-      if (request.stream) {
-        if (!response.ok) {
-          const body = await readJsonOrUndefined(response)
-          throw new OpenAiClientError(formatApiError(response.status, body))
-        }
-        return readStreamingAssistantText(response)
-      }
-
-      const body = await readJsonOrUndefined(response)
-
+    if (request.stream) {
       if (!response.ok) {
+        const body = await readJsonOrUndefined(response)
         throw new OpenAiClientError(formatApiError(response.status, body))
       }
+      return readStreamingAssistantText(response)
+    }
 
-      return extractAssistantText(body)
+    const body = await readJsonOrUndefined(response)
+
+    if (!response.ok) {
+      throw new OpenAiClientError(formatApiError(response.status, body))
+    }
+
+    return extractAssistantText(body)
+  }
+
+  return {
+    completeAction,
+    repairAction(request) {
+      return completeAction({
+        ...request,
+        task: buildRepairTask(request),
+        stream: false,
+      })
     },
   }
+}
+
+function buildRepairTask(request: RepairActionRequest) {
+  const outputInstruction =
+    request.promptMode === 'canonical-json'
+      ? 'Return only one corrected canonical JSON action object. No markdown, no prose.'
+      : 'Return only one corrected supported Open-AutoGLM action. No extra explanation.'
+
+  return [
+    request.task,
+    '',
+    'The previous model action output was invalid. Repair only the action output for the same screenshot and task.',
+    `<invalid_action_output>\n${request.invalidOutput}\n</invalid_action_output>`,
+    `<validation_error>\n${request.validationError}\n</validation_error>`,
+    outputInstruction,
+  ].join('\n')
 }
 
 async function readJsonOrUndefined(response: Response) {

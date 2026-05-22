@@ -14,7 +14,9 @@ import {
   findAdbKeyboardIme,
   isAndroidInputTextSafe,
   parseDeviceStateFromDumpsys,
+  parseInstalledAppsFromPackageOutput,
   parsePngSize,
+  retryDeviceOperation,
   type DeviceCommandStep,
   type DeviceBackend,
   type DeviceInfo,
@@ -22,13 +24,27 @@ import {
   type DeviceState,
   type DeviceTimingConfig,
   type ExecuteActionOptions,
+  type InstalledApp,
 } from './deviceBackend'
+
+const ADB_KEYBOARD_BROADCAST_ERROR = [
+  'ADB Keyboard or AutoGLM Keyboard was detected but did not accept the text broadcast.',
+  'Re-enable the keyboard on the device, then try again.',
+].join(' ')
+
+const ADB_KEYBOARD_MISSING_ERROR = [
+  'Chinese or complex text requires ADB Keyboard or AutoGLM Keyboard.',
+  'Install and enable it on the device, then try again.',
+].join(' ')
+
+const DEVICE_READ_RECOVER_AFTER_ATTEMPT = 2
 
 export class WebAdbDeviceBackend implements DeviceBackend {
   #adb: Adb | null = null
   #deviceInfo: DeviceInfo | null = null
   #preferAdbKeyboard = false
   #timing: DeviceTimingConfig = DEFAULT_DEVICE_TIMING
+  #installedApps: InstalledApp[] | null = null
 
   get isConnected() {
     return this.#adb !== null
@@ -72,6 +88,50 @@ export class WebAdbDeviceBackend implements DeviceBackend {
   }
 
   async screenshot(): Promise<DeviceScreenshot> {
+    return retryDeviceOperation(() => this.#readScreenshot(), {
+      label: 'screenshot',
+      recoverAfterAttempt: DEVICE_READ_RECOVER_AFTER_ATTEMPT,
+      recover: () => this.#recoverDeviceRead(),
+    })
+  }
+
+  async getCurrentApp(): Promise<string> {
+    return (await this.getDeviceState()).app
+  }
+
+  async getDeviceState(): Promise<DeviceState> {
+    return retryDeviceOperation(() => this.#readDeviceState(), {
+      label: 'device state',
+      recoverAfterAttempt: DEVICE_READ_RECOVER_AFTER_ATTEMPT,
+      recover: () => this.#recoverDeviceRead(),
+    })
+  }
+
+  async getInputMethods(): Promise<string> {
+    return retryDeviceOperation(
+      () => this.#requireAdb().subprocess.noneProtocol.spawnWaitText(['ime', 'list', '-s']),
+      {
+        label: 'input methods',
+        recoverAfterAttempt: DEVICE_READ_RECOVER_AFTER_ATTEMPT,
+        recover: () => this.#recoverDeviceRead(),
+      },
+    )
+  }
+
+  async getInstalledApps(): Promise<InstalledApp[]> {
+    if (this.#installedApps) {
+      return this.#installedApps
+    }
+
+    this.#installedApps = await retryDeviceOperation(() => this.#readInstalledApps(), {
+      label: 'installed apps',
+      recoverAfterAttempt: DEVICE_READ_RECOVER_AFTER_ATTEMPT,
+      recover: () => this.#recoverDeviceRead(),
+    })
+    return this.#installedApps
+  }
+
+  async #readScreenshot(): Promise<DeviceScreenshot> {
     const adb = this.#requireAdb()
     const bytes = await adb.subprocess.noneProtocol.spawnWait(['screencap', '-p'])
     const screen = parsePngSize(bytes)
@@ -92,11 +152,7 @@ export class WebAdbDeviceBackend implements DeviceBackend {
     }
   }
 
-  async getCurrentApp(): Promise<string> {
-    return (await this.getDeviceState()).app
-  }
-
-  async getDeviceState(): Promise<DeviceState> {
+  async #readDeviceState(): Promise<DeviceState> {
     const adb = this.#requireAdb()
     const [windowOutput, keyboard] = await Promise.all([
       adb.subprocess.noneProtocol.spawnWaitText(['dumpsys', 'window']),
@@ -106,6 +162,12 @@ export class WebAdbDeviceBackend implements DeviceBackend {
       ...parseDeviceStateFromDumpsys(windowOutput),
       ...(keyboard ? { keyboard } : {}),
     }
+  }
+
+  async #recoverDeviceRead() {
+    const adb = this.#requireAdb()
+    await delay(150)
+    await adb.subprocess.noneProtocol.spawnWaitText(['echo', 'webdroid-device-read-recovery'])
   }
 
   async execute(action: AgentAction, options?: ExecuteActionOptions): Promise<string> {
@@ -132,7 +194,9 @@ export class WebAdbDeviceBackend implements DeviceBackend {
 
     await assertSensitiveActionConfirmed(action, options)
 
-    const sequence = buildInputCommandSequence(action, this.#timing)
+    const installedApps =
+      action.action === 'launch' ? await this.getInstalledApps().catch(() => []) : undefined
+    const sequence = buildInputCommandSequence(action, this.#timing, installedApps)
     if (sequence.length === 0) {
       return 'No device command required.'
     }
@@ -161,6 +225,20 @@ export class WebAdbDeviceBackend implements DeviceBackend {
 
   setTimingConfig(value: DeviceTimingConfig) {
     this.#timing = value
+  }
+
+  async #readInstalledApps(): Promise<InstalledApp[]> {
+    const adb = this.#requireAdb()
+    const output = await adb.subprocess.noneProtocol.spawnWaitText([
+      'cmd',
+      'package',
+      'query-activities',
+      '-a',
+      'android.intent.action.MAIN',
+      '-c',
+      'android.intent.category.LAUNCHER',
+    ])
+    return parseInstalledAppsFromPackageOutput(output)
   }
 
   async #executeCommandStep(step: DeviceCommandStep) {
@@ -195,9 +273,7 @@ export class WebAdbDeviceBackend implements DeviceBackend {
       executed.push(command.join(' '))
       await delay(this.#timing.keyboardStepMs)
     } catch {
-      throw new DeviceBackendError(
-        'ADB Keyboard or AutoGLM Keyboard was detected but did not accept the text broadcast. Re-enable the keyboard on the device, then try again.',
-      )
+      throw new DeviceBackendError(ADB_KEYBOARD_BROADCAST_ERROR)
     } finally {
       if (originalIme && originalIme !== keyboardIme) {
         await adb.subprocess.noneProtocol.spawnWaitText(['ime', 'set', originalIme])
@@ -210,19 +286,29 @@ export class WebAdbDeviceBackend implements DeviceBackend {
   }
 
   async #sendAdbKeyboardText(text: string) {
-    const command = ['am', 'broadcast', '-a', 'ADB_INPUT_B64', '--es', 'msg', encodeAdbKeyboardText(text)]
+    const command = [
+      'am',
+      'broadcast',
+      '-a',
+      'ADB_INPUT_B64',
+      '--es',
+      'msg',
+      encodeAdbKeyboardText(text),
+    ]
     const adb = this.#requireAdb()
     await adb.subprocess.noneProtocol.spawnWait(command)
     return command
   }
 
   async #detectAdbKeyboardIme() {
-    const imeList = await this.#requireAdb().subprocess.noneProtocol.spawnWaitText(['ime', 'list', '-s'])
+    const imeList = await this.#requireAdb().subprocess.noneProtocol.spawnWaitText([
+      'ime',
+      'list',
+      '-s',
+    ])
     const keyboardIme = findAdbKeyboardIme(imeList)
     if (!keyboardIme) {
-      throw new DeviceBackendError(
-        'Chinese or complex text requires ADB Keyboard or AutoGLM Keyboard. Install and enable it on the device, then try again.',
-      )
+      throw new DeviceBackendError(ADB_KEYBOARD_MISSING_ERROR)
     }
     return keyboardIme
   }

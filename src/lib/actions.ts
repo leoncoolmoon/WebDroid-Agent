@@ -228,11 +228,18 @@ export function validateAction(candidate: unknown, screen?: ScreenSize): AgentAc
       return withReason({ action, ms }, candidate)
     }
     case 'take_over': {
-      const message = optionalString(candidate, 'message') ?? optionalString(candidate, 'reason') ?? 'Manual takeover requested.'
+      const message =
+        optionalString(candidate, 'message') ??
+        optionalString(candidate, 'reason') ??
+        'Manual takeover requested.'
       return withReason({ action, message }, candidate)
     }
     case 'note': {
-      const message = optionalString(candidate, 'message') ?? optionalString(candidate, 'content') ?? optionalString(candidate, 'text') ?? 'Observation noted.'
+      const message =
+        optionalString(candidate, 'message') ??
+        optionalString(candidate, 'content') ??
+        optionalString(candidate, 'text') ??
+        'Observation noted.'
       return withReason({ action, message }, candidate)
     }
     case 'interact': {

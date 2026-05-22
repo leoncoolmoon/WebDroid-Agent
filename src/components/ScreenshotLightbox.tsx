@@ -14,6 +14,9 @@ export function ScreenshotLightbox({
   title,
   thumbnailAlt,
   expandedAlt,
+  openButtonLabel,
+  dialogLabel,
+  closeLabel = 'Close screenshot preview',
   thumbnailClassName,
   overlayClassName = 'log-screenshot-overlay',
   modalClassName = 'screenshot-modal',
@@ -26,6 +29,9 @@ export function ScreenshotLightbox({
   title: string
   thumbnailAlt: string
   expandedAlt: string
+  openButtonLabel?: string
+  dialogLabel?: string
+  closeLabel?: string
   thumbnailClassName: string
   overlayClassName?: string
   modalClassName?: string
@@ -72,7 +78,7 @@ export function ScreenshotLightbox({
       <button
         type="button"
         className={thumbnailClassName}
-        aria-label={`Open screenshot for ${title}`}
+        aria-label={openButtonLabel ?? `Open screenshot for ${title}`}
         onClick={openLightbox}
       >
         <img src={screenshot.dataUrl} alt={thumbnailAlt} />
@@ -87,7 +93,7 @@ export function ScreenshotLightbox({
           className={modalClassName}
           role="dialog"
           aria-modal="true"
-          aria-label={`Screenshot for ${title}`}
+          aria-label={dialogLabel ?? `Screenshot for ${title}`}
           onClick={() => setOpen(false)}
         >
           <div className={panelClassName} onClick={(event) => event.stopPropagation()}>
@@ -102,7 +108,7 @@ export function ScreenshotLightbox({
                 type="button"
                 className={closeClassName}
                 onClick={() => setOpen(false)}
-                aria-label="Close screenshot preview"
+                aria-label={closeLabel}
               >
                 <X size={16} />
               </button>

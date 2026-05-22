@@ -1,0 +1,112 @@
+.settings-page {
+  align-items: flex-start;
+  background: var(--overlay);
+  bottom: 0;
+  display: flex;
+  justify-content: flex-end;
+  left: 0;
+  padding: 24px;
+  position: fixed;
+  right: 0;
+  top: 0;
+  z-index: 40;
+}
+
+.settings-panel {
+  background: var(--panel-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 24px 72px var(--shadow-strong);
+  display: grid;
+  gap: 16px;
+  max-width: 520px;
+  padding: 20px;
+  width: min(100%, 520px);
+}
+
+.settings-header {
+  align-items: flex-start;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.settings-header h2 {
+  font-size: 24px;
+}
+
+.settings-close {
+  flex: 0 0 auto;
+}
+
+.settings-copy {
+  color: var(--text-secondary);
+  line-height: 1.55;
+  margin: 0;
+}
+
+.settings-field span {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+.settings-field svg {
+  color: var(--accent);
+}
+
+.repository-link {
+  align-items: center;
+  background: var(--subtle-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  display: flex;
+  gap: 8px;
+  min-width: 0;
+  padding: 12px;
+  text-decoration: none;
+}
+
+.repository-link span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.repository-stats {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.repository-stats div {
+  background: var(--subtle-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  display: grid;
+  gap: 6px;
+  justify-items: start;
+  min-height: 104px;
+  padding: 12px;
+}
+
+.repository-stats svg {
+  color: var(--accent);
+}
+
+.repository-stats strong {
+  color: var(--text);
+  font-size: 24px;
+  line-height: 1;
+}
+
+.repository-stats span,
+.settings-error {
+  color: var(--text-soft);
+  font-size: 13px;
+}
+
+.settings-error {
+  margin: 0;
+}

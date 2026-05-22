@@ -10,6 +10,15 @@ export type LogEntry = {
   title: string
   detail?: string
   screenshot?: LogScreenshot
+  timeline?: {
+    step?: number
+    currentApp?: string
+    packageName?: string
+    modelOutput?: string
+    actionPreview?: string
+    executionActionPreview?: string
+    executionResult?: string
+  }
 }
 
 export function RunLog({
@@ -17,7 +26,10 @@ export function RunLog({
   onClear,
   labels = {
     clear: 'Clear',
+    closeScreenshotPreview: 'Close screenshot preview',
     empty: 'No events yet',
+    openScreenshotFor: (title: string) => `Open screenshot for ${title}`,
+    screenshotDialogFor: (title: string) => `Screenshot for ${title}`,
     title: 'Run Log',
     screenshotFor: (title: string) => `Screenshot for ${title}`,
     expandedScreenshotFor: (title: string) => `Expanded screenshot for ${title}`,
@@ -27,7 +39,10 @@ export function RunLog({
   onClear: () => void
   labels?: {
     clear: string
+    closeScreenshotPreview: string
     empty: string
+    openScreenshotFor: (title: string) => string
+    screenshotDialogFor: (title: string) => string
     title: string
     screenshotFor: (title: string) => string
     expandedScreenshotFor: (title: string) => string
@@ -56,9 +71,12 @@ export function RunLog({
               <time>{entry.time}</time>
               <strong>{entry.title}</strong>
             </div>
-            {entry.detail || entry.screenshot ? (
+            {entry.detail || entry.timeline || entry.screenshot ? (
               <div className="log-entry-body">
-                {entry.detail ? <pre>{entry.detail}</pre> : null}
+                <div className="log-entry-text">
+                  {entry.timeline ? <StepTimeline timeline={entry.timeline} /> : null}
+                  {entry.detail ? <pre>{entry.detail}</pre> : null}
+                </div>
                 {entry.screenshot ? (
                   <div className="log-entry-media">
                     <ScreenshotLightbox
@@ -66,6 +84,9 @@ export function RunLog({
                       title={entry.title}
                       thumbnailAlt={labels.screenshotFor(entry.title)}
                       expandedAlt={labels.expandedScreenshotFor(entry.title)}
+                      openButtonLabel={labels.openScreenshotFor(entry.title)}
+                      dialogLabel={labels.screenshotDialogFor(entry.title)}
+                      closeLabel={labels.closeScreenshotPreview}
                       thumbnailClassName="log-screenshot-button"
                     />
                   </div>
@@ -76,5 +97,46 @@ export function RunLog({
         ))}
       </div>
     </section>
+  )
+}
+
+function StepTimeline({ timeline }: { timeline: NonNullable<LogEntry['timeline']> }) {
+  return (
+    <div className="step-timeline">
+      <div className="step-timeline-header">
+        {timeline.step ? <span>Step {timeline.step}</span> : null}
+        {timeline.currentApp ? <strong>{timeline.currentApp}</strong> : null}
+        {timeline.packageName ? <code>{timeline.packageName}</code> : null}
+      </div>
+      {timeline.modelOutput ? (
+        <TimelineField label="Model output" value={timeline.modelOutput} />
+      ) : null}
+      {timeline.actionPreview || timeline.executionActionPreview ? (
+        <TimelineField
+          label="Parsed action"
+          value={[
+            timeline.actionPreview,
+            timeline.executionActionPreview &&
+            timeline.executionActionPreview !== timeline.actionPreview
+              ? timeline.executionActionPreview
+              : null,
+          ]
+            .filter(Boolean)
+            .join('\n')}
+        />
+      ) : null}
+      {timeline.executionResult ? (
+        <TimelineField label="Execution result" value={timeline.executionResult} />
+      ) : null}
+    </div>
+  )
+}
+
+function TimelineField({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="step-timeline-field">
+      <span>{label}</span>
+      <pre>{value}</pre>
+    </div>
   )
 }

@@ -1,33 +1,19 @@
 import {
   AlertTriangle,
-  Check,
-  CircleStop,
-  Code2,
-  Download,
-  ExternalLink,
-  GitFork,
-  KeyRound,
-  Languages,
-  Link,
-  Loader2,
-  MessageSquare,
-  Monitor,
-  Plus,
-  Play,
-  RotateCcw,
   ScanEye,
-  Send,
   Settings as SettingsIcon,
-  Star,
-  StepForward,
   Usb,
 } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import './App.css'
-import type { DeviceInfo, DeviceScreenshot, DeviceState } from './adapters/deviceBackend'
+import type {
+  DeviceInfo,
+  DeviceScreenshot,
+  DeviceState,
+  InstalledApp,
+} from './adapters/deviceBackend'
 import { WebAdbDeviceBackend, isWebUsbSupported } from './adapters/webAdbBackend'
-import type { AgentAction } from './lib/actions'
-import { buildActionPreview } from './lib/actions'
+import { buildActionPreview, type AgentAction } from './lib/actions'
 import {
   addUserMessage,
   createAgentRunner,
@@ -38,224 +24,26 @@ import {
   type AgentSession,
   type AgentStep,
 } from './lib/agent'
+import {
+  formatDoctorResults,
+  runDeviceDoctor,
+  summarizeDoctorResults,
+  type DoctorCheckResult,
+} from './lib/deviceDoctor'
 import { createOpenAiClient, type ModelConfig } from './lib/openAiClient'
 import type { PromptMode } from './lib/prompts'
+import { APP_COPY, resolveLocale } from './lib/appCopy'
+import { readRepositoryStats, REPOSITORY_API_URL, type RepositoryStats } from './lib/repository'
 import { modelScreenshotView } from './lib/screenshotCoordinates'
-import { loadSettings, saveSettings, type LanguageMode, type ThemeMode } from './lib/settings'
+import { loadSettings, saveSettings } from './lib/settings'
+import { TASK_TEMPLATES } from './lib/taskTemplates'
 import { createDefaultActionToolRegistry } from './lib/toolRegistry'
+import { DevicePanel } from './components/DevicePanel'
+import { ModelPanel } from './components/ModelPanel'
+import { PhoneStage } from './components/PhoneStage'
 import { RunLog, type LogEntry, type LogScreenshot } from './components/RunLog'
-import { ScreenshotLightbox } from './components/ScreenshotLightbox'
-
-const REPOSITORY_URL = 'https://github.com/yeahhe365/webadb-autoglm'
-const REPOSITORY_API_URL = 'https://api.github.com/repos/yeahhe365/webadb-autoglm'
-type Locale = 'en-US' | 'zh-CN'
-
-const APP_COPY = {
-  'en-US': {
-    settings: 'Settings',
-    closeSettings: 'Close settings',
-    close: 'Close',
-    language: 'Language',
-    languageSystem: 'System default',
-    languageChinese: '中文',
-    languageEnglish: 'English',
-    aboutCopy:
-      'Browser-based Android automation console for WebADB and OpenAI-compatible vision models.',
-    githubRepository: 'GitHub repository',
-    repositoryStats: 'Repository stats',
-    stars: 'Stars',
-    forks: 'Forks',
-    openIssues: 'Open issues',
-    githubStatsError: 'Could not load GitHub stats right now.',
-    theme: 'Theme',
-    themeSystem: 'System',
-    themeLight: 'Light',
-    themeDark: 'Dark',
-    webUsbReady: 'ready',
-    webUsbMissing: 'missing',
-    model: 'Model',
-    noModel: 'No model',
-    modelSettings: 'Model settings',
-    baseUrl: 'Base URL',
-    apiKey: 'API Key',
-    promptMode: 'Prompt mode',
-    streamModelResponses: 'Stream model responses',
-    device: 'Device',
-    noDevice: 'No device',
-    deviceDetails: 'Device details',
-    serial: 'Serial',
-    currentApp: 'Current app',
-    package: 'Package',
-    activity: 'Activity',
-    keyboard: 'Keyboard',
-    usbDebuggingRequired: 'USB debugging required',
-    connect: 'Connect',
-    disconnect: 'Disconnect',
-    capture: 'Capture',
-    enableAdbKeyboard: 'Enable ADB Keyboard',
-    useAdbKeyboard: 'Use ADB Keyboard for text',
-    confirmSensitiveTaps: 'Confirm sensitive taps',
-    actionSettle: 'Action settle (ms)',
-    doubleTapInterval: 'Double tap interval (ms)',
-    keyboardStep: 'Keyboard step (ms)',
-    supportedActions: 'Supported actions',
-    capabilities: ['Launch', 'Tap', 'Type', 'Swipe', 'Back', 'Home', 'Long press', 'Double tap', 'Wait', 'Take over'],
-    androidScreenshot: 'Android screenshot',
-    expandedAndroidScreenshot: 'Expanded screenshot for Android screenshot',
-    noScreenshot: 'No screenshot',
-    chat: 'Chat',
-    conversation: 'Conversation',
-    noMessages: 'No messages yet',
-    chatMessage: 'Chat message',
-    chatPlaceholder: 'Send a follow-up instruction...',
-    send: 'Send',
-    newChat: 'New chat',
-    maxSteps: 'Max steps',
-    autoExecute: 'Auto execute',
-    plan: 'Plan',
-    run: 'Run',
-    runAgent: 'Run agent',
-    stop: 'Stop',
-    reset: 'Reset',
-    export: 'Export',
-    pendingAction: 'Pending action',
-    step: 'Step',
-    none: 'None',
-    acknowledge: 'Acknowledge',
-    finish: 'Finish',
-    execute: 'Execute',
-    user: 'User',
-    assistant: 'Assistant',
-    observation: 'Observation',
-    runLog: 'Run Log',
-    clear: 'Clear',
-    noEvents: 'No events yet',
-  },
-  'zh-CN': {
-    settings: '设置',
-    closeSettings: '关闭设置',
-    close: '关闭',
-    language: '语言',
-    languageSystem: '系统默认',
-    languageChinese: '中文',
-    languageEnglish: 'English',
-    aboutCopy: '基于浏览器的 Android 自动化控制台，支持 WebADB 和 OpenAI 兼容视觉模型。',
-    githubRepository: 'GitHub 仓库',
-    repositoryStats: '仓库统计',
-    stars: '星标',
-    forks: '复刻',
-    openIssues: '开放问题',
-    githubStatsError: '暂时无法加载 GitHub 统计。',
-    theme: '主题',
-    themeSystem: '系统',
-    themeLight: '浅色',
-    themeDark: '深色',
-    webUsbReady: '可用',
-    webUsbMissing: '不可用',
-    model: '模型',
-    noModel: '未设置模型',
-    modelSettings: '模型设置',
-    baseUrl: 'Base URL',
-    apiKey: 'API Key',
-    promptMode: '提示模式',
-    streamModelResponses: '流式模型响应',
-    device: '设备',
-    noDevice: '无设备',
-    deviceDetails: '设备详情',
-    serial: '序列号',
-    currentApp: '当前应用',
-    package: '包名',
-    activity: 'Activity',
-    keyboard: '键盘',
-    usbDebuggingRequired: '需要 USB 调试',
-    connect: '连接',
-    disconnect: '断开',
-    capture: '截图',
-    enableAdbKeyboard: '启用 ADB 键盘',
-    useAdbKeyboard: '文本输入使用 ADB 键盘',
-    confirmSensitiveTaps: '确认敏感点击',
-    actionSettle: '动作等待 (ms)',
-    doubleTapInterval: '双击间隔 (ms)',
-    keyboardStep: '键盘步进 (ms)',
-    supportedActions: '支持的动作',
-    capabilities: ['启动', '点击', '输入', '滑动', '返回', '主页', '长按', '双击', '等待', '接管'],
-    androidScreenshot: 'Android 截图',
-    expandedAndroidScreenshot: '展开的 Android 截图',
-    noScreenshot: '暂无截图',
-    chat: '聊天',
-    conversation: '对话',
-    noMessages: '暂无消息',
-    chatMessage: '聊天消息',
-    chatPlaceholder: '发送后续指令...',
-    send: '发送',
-    newChat: '新聊天',
-    maxSteps: '最大步数',
-    autoExecute: '自动执行',
-    plan: '计划',
-    run: '运行',
-    runAgent: '运行代理',
-    stop: '停止',
-    reset: '重置',
-    export: '导出',
-    pendingAction: '待处理动作',
-    step: '步骤',
-    none: '无',
-    acknowledge: '确认',
-    finish: '完成',
-    execute: '执行',
-    user: '用户',
-    assistant: '助手',
-    observation: '观察',
-    runLog: '运行日志',
-    clear: '清空',
-    noEvents: '暂无事件',
-  },
-} as const
-
-type AppCopy = (typeof APP_COPY)[Locale]
-
-type RepositoryStats = {
-  stars: number
-  forks: number
-  openIssues: number
-}
-
-function readNumber(value: unknown) {
-  return typeof value === 'number' && Number.isFinite(value) ? value : 0
-}
-
-function readRepositoryStats(value: unknown): RepositoryStats {
-  const record = value && typeof value === 'object' ? (value as Record<string, unknown>) : {}
-  return {
-    stars: readNumber(record.stargazers_count),
-    forks: readNumber(record.forks_count),
-    openIssues: readNumber(record.open_issues_count),
-  }
-}
-
-function resolveLocale(languageMode: LanguageMode): Locale {
-  if (languageMode === 'zh-CN' || languageMode === 'en-US') {
-    return languageMode
-  }
-
-  const browserLanguage = navigator.languages?.[0] ?? navigator.language
-  return browserLanguage.toLowerCase().startsWith('zh') ? 'zh-CN' : 'en-US'
-}
-
-function pendingActionLabel(action: AgentAction['action'] | undefined, copy: AppCopy) {
-  if (
-    action === 'take_over' ||
-    action === 'note' ||
-    action === 'interact' ||
-    action === 'call_api'
-  ) {
-    return copy.acknowledge
-  }
-  if (action === 'done') {
-    return copy.finish
-  }
-  return copy.execute
-}
+import { RunPanel } from './components/RunPanel'
+import { SettingsDialog } from './components/SettingsDialog'
 
 function App() {
   const abortRef = useRef<AbortController | null>(null)
@@ -284,12 +72,14 @@ function App() {
   const [deviceInfo, setDeviceInfo] = useState<DeviceInfo | null>(null)
   const [currentApp, setCurrentApp] = useState<string>('Unknown')
   const [deviceState, setDeviceState] = useState<DeviceState>({ app: 'Unknown' })
+  const [installedApps, setInstalledApps] = useState<InstalledApp[]>([])
+  const [doctorResults, setDoctorResults] = useState<DoctorCheckResult[]>([])
   const [screenshot, setScreenshot] = useState<DeviceScreenshot | null>(null)
   const [pendingStep, setPendingStep] = useState<AgentStep | null>(null)
   const [logs, setLogs] = useState<LogEntry[]>([])
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [aboutOpen, setAboutOpen] = useState(false)
+  const [settingsOpen, setSettingsOpen] = useState(false)
   const [repositoryStats, setRepositoryStats] = useState<RepositoryStats | null>(null)
   const [repositoryStatsStatus, setRepositoryStatsStatus] = useState<'idle' | 'loading' | 'done' | 'error'>(
     'idle',
@@ -302,7 +92,7 @@ function App() {
   const displayedScreenshot = screenshot ? modelScreenshotView(screenshot) : null
   const activeLocale = useMemo(() => resolveLocale(languageMode), [languageMode])
   const copy = APP_COPY[activeLocale]
-  const pendingButtonLabel = pendingActionLabel(pendingStep?.action.action, copy)
+  const taskTemplates = TASK_TEMPLATES[activeLocale]
 
   useEffect(() => {
     saveSettings({
@@ -341,6 +131,22 @@ function App() {
   }, [themeMode])
 
   useEffect(() => {
+    const media = window.matchMedia?.('(prefers-color-scheme: dark)')
+
+    function syncSystemTheme() {
+      if (themeMode === 'system' && media?.matches) {
+        document.documentElement.dataset.systemTheme = 'dark'
+        return
+      }
+      delete document.documentElement.dataset.systemTheme
+    }
+
+    syncSystemTheme()
+    media?.addEventListener('change', syncSystemTheme)
+    return () => media?.removeEventListener('change', syncSystemTheme)
+  }, [themeMode])
+
+  useEffect(() => {
     document.documentElement.lang = activeLocale
   }, [activeLocale])
 
@@ -357,7 +163,7 @@ function App() {
   }, [actionSettleMs, backend, doubleTapIntervalMs, keyboardStepMs])
 
   useEffect(() => {
-    if (!aboutOpen || repositoryStatsStatus !== 'idle') {
+    if (!settingsOpen || repositoryStatsStatus !== 'idle') {
       return
     }
 
@@ -382,7 +188,7 @@ function App() {
     }
 
     void loadRepositoryStats()
-  }, [aboutOpen, repositoryStatsStatus])
+  }, [settingsOpen, repositoryStatsStatus])
 
   function updateConfig<Key extends keyof ModelConfig>(key: Key, value: ModelConfig[Key]) {
     setModelConfig((current) => {
@@ -445,20 +251,52 @@ function App() {
     setLogs([])
   }
 
+  function applyTaskTemplate(prompt: string) {
+    setChatInput(prompt)
+  }
+
   function confirmSensitiveAction(message: string) {
     if (!confirmSensitiveActions) {
       return true
     }
 
-    return window.confirm(`Sensitive action requested:\n\n${message}\n\nExecute it?`)
+    return window.confirm(
+      [
+        `${copy.sensitiveActionTitle}:`,
+        '',
+        message,
+        '',
+        copy.sensitiveActionPrompt,
+      ].join('\n'),
+    )
   }
 
   function formatStepDetail(step: AgentStep) {
+    const timingDetail = [
+      `capture ${step.timing.captureMs}ms`,
+      `app ${step.timing.currentAppMs}ms`,
+      `model ${step.timing.modelMs}ms`,
+      `parse ${step.timing.parseMs}ms`,
+      `total ${step.timing.totalMs}ms`,
+    ].join(', ')
+
     return [
       `Current app: ${step.currentApp}`,
-      `Timing: capture ${step.timing.captureMs}ms, app ${step.timing.currentAppMs}ms, model ${step.timing.modelMs}ms, parse ${step.timing.parseMs}ms, total ${step.timing.totalMs}ms`,
+      `Timing: ${timingDetail}`,
       step.modelOutput,
     ].join('\n\n')
+  }
+
+  function buildStepTimeline(step: AgentStep, executionResult?: string): LogEntry['timeline'] {
+    return {
+      step: step.index,
+      currentApp: step.currentApp,
+      packageName: step.deviceState.packageName,
+      modelOutput: step.modelOutput,
+      actionPreview: buildActionPreview(step.action),
+      executionActionPreview: buildActionPreview(step.executionAction),
+      executionResult,
+    }
   }
 
   function exportRunLog() {
@@ -514,6 +352,7 @@ function App() {
       setDeviceInfo(info)
       addLog({ tone: 'ok', title: 'Device connected', detail: `${info.name} (${info.serial})` })
       await captureScreen()
+      await refreshInstalledApps()
     })
   }
 
@@ -523,6 +362,8 @@ function App() {
       setDeviceInfo(null)
       setCurrentApp('Unknown')
       setDeviceState({ app: 'Unknown' })
+      setInstalledApps([])
+      setDoctorResults([])
       setScreenshot(null)
       setPendingStep(null)
       addLog({ tone: 'info', title: 'Device disconnected' })
@@ -536,13 +377,27 @@ function App() {
       setScreenshot(nextScreenshot)
       setCurrentApp(nextDeviceState.app)
       setDeviceState(nextDeviceState)
+      const screenshotSize = `${nextScreenshot.screen.width}x${nextScreenshot.screen.height}`
       addLog({
         tone: 'ok',
         title: 'Screen captured',
-        detail: `${nextScreenshot.screen.width}x${nextScreenshot.screen.height}\n${formatDeviceState(nextDeviceState)}`,
+        detail: [screenshotSize, formatDeviceState(nextDeviceState)].join('\n'),
         screenshot: toLogScreenshot(nextScreenshot),
       })
     })
+  }
+
+  async function refreshInstalledApps() {
+    if (!backend.getInstalledApps) {
+      setInstalledApps([])
+      return
+    }
+
+    try {
+      setInstalledApps(await backend.getInstalledApps())
+    } catch {
+      setInstalledApps([])
+    }
   }
 
   async function enableAdbKeyboard() {
@@ -550,6 +405,48 @@ function App() {
       const result = await backend.enableAdbKeyboard()
       setPreferAdbKeyboard(true)
       addLog({ tone: 'ok', title: 'ADB Keyboard enabled', detail: result })
+    })
+  }
+
+  async function runDoctor() {
+    await runTask(copy.runDoctor, async () => {
+      const results = await runDeviceDoctor({
+        connected,
+        device: backend,
+        deviceInfo,
+        fetcher: globalThis.fetch,
+        isWebUsbSupported,
+        modelConfig,
+      })
+      setDoctorResults(results)
+      addLog({
+        tone: results.some((result) => result.status === 'error')
+          ? 'error'
+          : results.some((result) => result.status === 'warn')
+            ? 'warn'
+            : 'ok',
+        title: copy.doctorSummary,
+        detail: [summarizeDoctorResults(results), formatDoctorResults(results)].join('\n\n'),
+      })
+    })
+  }
+
+  async function runDirectAction(action: AgentAction) {
+    await runTask(copy.directCommand, async () => {
+      const result = await backend.execute(action)
+      addLog({
+        tone: 'ok',
+        title: copy.directCommand,
+        detail: [buildActionPreview(action), result].filter(Boolean).join('\n'),
+      })
+    })
+  }
+
+  function launchInstalledApp(app: InstalledApp) {
+    void runDirectAction({
+      action: 'launch',
+      app: app.label || app.packageName,
+      packageName: app.packageName,
     })
   }
 
@@ -580,6 +477,7 @@ function App() {
         title: `Step ${step.index}: ${step.preview}`,
         detail: formatStepDetail(step),
         screenshot: toLogScreenshot(step.screenshot),
+        timeline: buildStepTimeline(step),
       })
     })
   }
@@ -607,6 +505,8 @@ function App() {
         tone: result.success ? 'ok' : 'error',
         title: result.success ? `Executed ${pendingStep.preview}` : `Failed ${pendingStep.preview}`,
         detail: result.summary,
+        screenshot: toLogScreenshot(pendingStep.screenshot),
+        timeline: buildStepTimeline(pendingStep, result.summary),
       })
       if (!result.success) {
         setError(result.summary)
@@ -642,11 +542,18 @@ function App() {
             title: `Step ${step.index}: ${step.preview}`,
             detail: formatStepDetail(step),
             screenshot: toLogScreenshot(step.screenshot),
+            timeline: buildStepTimeline(step),
           })
           syncConversation()
         },
         onExecuted: (step, commandResult) => {
-          addLog({ tone: 'ok', title: `Executed ${step.preview}`, detail: commandResult })
+          addLog({
+            tone: 'ok',
+            title: `Executed ${step.preview}`,
+            detail: commandResult,
+            screenshot: toLogScreenshot(step.screenshot),
+            timeline: buildStepTimeline(step, commandResult),
+          })
           syncConversation()
         },
       })
@@ -712,7 +619,12 @@ function App() {
   return (
     <main className="app-shell">
       <header className="topbar">
-        <div>
+        <div className="topbar-brand">
+          <img
+            alt="WebDroid Agent logo"
+            className="app-logo"
+            src="/webdroid-agent-logo.png"
+          />
           <h1>WebDroid Agent</h1>
         </div>
         <div className="topbar-actions">
@@ -723,113 +635,27 @@ function App() {
             </span>
             <span className="status">
               <ScanEye size={16} />
-              {currentApp}
+              {copy.currentApp}: {currentApp}
             </span>
           </div>
-          <button type="button" className="settings-button" onClick={() => setAboutOpen(true)}>
+          <button type="button" className="settings-button" onClick={() => setSettingsOpen(true)}>
             <SettingsIcon size={16} />
             {copy.settings}
           </button>
         </div>
       </header>
 
-      {aboutOpen ? (
-        <div
-          className="about-page"
-          role="dialog"
-          aria-modal="true"
-          aria-label={copy.settings}
-          onClick={() => setAboutOpen(false)}
-        >
-          <section className="about-panel" onClick={(event) => event.stopPropagation()}>
-            <div className="about-header">
-              <div>
-                <p className="eyebrow">{copy.settings}</p>
-                <h2>WebDroid Agent</h2>
-              </div>
-              <button
-                type="button"
-                className="about-close"
-                onClick={() => setAboutOpen(false)}
-                aria-label={copy.closeSettings}
-              >
-                {copy.close}
-              </button>
-            </div>
-            <label className="settings-field">
-              <span>
-                <Languages size={16} />
-                {copy.language}
-              </span>
-              <select
-                value={languageMode}
-                onChange={(event) => setLanguageMode(event.target.value as LanguageMode)}
-              >
-                <option value="system">{copy.languageSystem}</option>
-                <option value="zh-CN">{copy.languageChinese}</option>
-                <option value="en-US">{copy.languageEnglish}</option>
-              </select>
-            </label>
-            <label className="settings-field">
-              <span>
-                <Monitor size={16} />
-                {copy.theme}
-              </span>
-              <select
-                value={themeMode}
-                onChange={(event) => setThemeMode(event.target.value as ThemeMode)}
-              >
-                <option value="system">{copy.themeSystem}</option>
-                <option value="light">{copy.themeLight}</option>
-                <option value="dark">{copy.themeDark}</option>
-              </select>
-            </label>
-            <p className="about-copy">{copy.aboutCopy}</p>
-            <a
-              className="repository-link"
-              href={REPOSITORY_URL}
-              target="_blank"
-              rel="noreferrer"
-              aria-label={copy.githubRepository}
-            >
-              <Code2 size={18} />
-              <span>{REPOSITORY_URL}</span>
-              <ExternalLink size={15} />
-            </a>
-            <div className="repository-stats" aria-label={copy.repositoryStats}>
-              <div>
-                <Star size={18} />
-                <strong>
-                  {repositoryStatsStatus === 'loading'
-                    ? '...'
-                    : (repositoryStats?.stars.toLocaleString() ?? '-')}
-                </strong>
-                <span>{copy.stars}</span>
-              </div>
-              <div>
-                <GitFork size={18} />
-                <strong>
-                  {repositoryStatsStatus === 'loading'
-                    ? '...'
-                    : (repositoryStats?.forks.toLocaleString() ?? '-')}
-                </strong>
-                <span>{copy.forks}</span>
-              </div>
-              <div>
-                <AlertTriangle size={18} />
-                <strong>
-                  {repositoryStatsStatus === 'loading'
-                    ? '...'
-                    : (repositoryStats?.openIssues.toLocaleString() ?? '-')}
-                </strong>
-                <span>{copy.openIssues}</span>
-              </div>
-            </div>
-            {repositoryStatsStatus === 'error' ? (
-              <p className="about-error">{copy.githubStatsError}</p>
-            ) : null}
-          </section>
-        </div>
+      {settingsOpen ? (
+        <SettingsDialog
+          copy={copy}
+          languageMode={languageMode}
+          onClose={() => setSettingsOpen(false)}
+          onLanguageModeChange={setLanguageMode}
+          onThemeModeChange={setThemeMode}
+          repositoryStats={repositoryStats}
+          repositoryStatsStatus={repositoryStatsStatus}
+          themeMode={themeMode}
+        />
       ) : null}
 
       {error ? (
@@ -841,268 +667,77 @@ function App() {
 
       <section className="workspace">
         <aside className="panel config-panel">
-          <div className="panel-title">
-            <KeyRound size={18} />
-            <h2>{copy.model}</h2>
-          </div>
-          <div className="model-box">
-            <span>{modelConfig.model || copy.noModel}</span>
-            <details className="model-details">
-              <summary>{copy.modelSettings}</summary>
-              <label>
-                {copy.baseUrl}
-                <input
-                  value={modelConfig.baseUrl}
-                  onChange={(event) => updateConfig('baseUrl', event.target.value)}
-                  placeholder="https://api.example.com/v1"
-                />
-              </label>
-              <label>
-                {copy.apiKey}
-                <input
-                  value={modelConfig.apiKey}
-                  onChange={(event) => updateConfig('apiKey', event.target.value)}
-                  placeholder="sk-..."
-                  type="password"
-                />
-              </label>
-              <label>
-                {copy.model}
-                <input
-                  value={modelConfig.model}
-                  onChange={(event) => updateConfig('model', event.target.value)}
-                  placeholder="vision-model"
-                />
-              </label>
-              <label>
-                {copy.promptMode}
-                <select
-                  value={promptMode}
-                  onChange={(event) => setPromptMode(event.target.value as PromptMode)}
-                >
-                  <option value="canonical-json">Canonical JSON</option>
-                  <option value="autoglm-native">AutoGLM native</option>
-                </select>
-              </label>
-              <label className="toggle">
-                <input
-                  type="checkbox"
-                  checked={streamResponses}
-                  onChange={(event) => setStreamResponses(event.target.checked)}
-                />
-                <span>{copy.streamModelResponses}</span>
-              </label>
-            </details>
-          </div>
+          <ModelPanel
+            copy={copy}
+            modelConfig={modelConfig}
+            onModelConfigChange={updateConfig}
+            onPromptModeChange={setPromptMode}
+            onStreamResponsesChange={setStreamResponses}
+            promptMode={promptMode}
+            streamResponses={streamResponses}
+          />
 
-          <div className="panel-title">
-            <Usb size={18} />
-            <h2>{copy.device}</h2>
-          </div>
-          <div className="device-box">
-            <span>{deviceInfo?.name || copy.noDevice}</span>
-            {connected ? (
-              <details className="device-details">
-                <summary>{copy.deviceDetails}</summary>
-                <small>{copy.serial}: {deviceInfo.serial}</small>
-                <small>{copy.currentApp}: {currentApp}</small>
-                {deviceState.packageName ? <small>{copy.package}: {deviceState.packageName}</small> : null}
-                {deviceState.activity ? <small>{copy.activity}: {deviceState.activity}</small> : null}
-                {deviceState.keyboard ? <small>{copy.keyboard}: {deviceState.keyboard}</small> : null}
-              </details>
-            ) : (
-              <>
-                <small>{copy.usbDebuggingRequired}</small>
-                <small>{copy.currentApp}: {currentApp}</small>
-              </>
-            )}
-          </div>
-          <div className="button-row">
-            <button type="button" onClick={connectDevice} disabled={Boolean(busy) || connected}>
-              <Link size={16} />
-              {copy.connect}
-            </button>
-            <button type="button" onClick={disconnectDevice} disabled={Boolean(busy) || !connected}>
-              <CircleStop size={16} />
-              {copy.disconnect}
-            </button>
-          </div>
-          <button type="button" className="wide" onClick={captureScreen} disabled={Boolean(busy) || !connected}>
-            <ScanEye size={16} />
-            {copy.capture}
-          </button>
-          <button
-            type="button"
-            className="wide"
-            onClick={enableAdbKeyboard}
-            disabled={Boolean(busy) || !connected}
-          >
-            <KeyRound size={16} />
-            {copy.enableAdbKeyboard}
-          </button>
-          <label className="toggle">
-            <input
-              type="checkbox"
-              checked={preferAdbKeyboard}
-              onChange={(event) => toggleAdbKeyboard(event.target.checked)}
-            />
-            <span>{copy.useAdbKeyboard}</span>
-          </label>
-          <label className="toggle">
-            <input
-              type="checkbox"
-              checked={confirmSensitiveActions}
-              onChange={(event) => setConfirmSensitiveActions(event.target.checked)}
-            />
-            <span>{copy.confirmSensitiveTaps}</span>
-          </label>
-          <div className="timing-grid">
-            <label>
-              {copy.actionSettle}
-              <input
-                type="number"
-                min={100}
-                max={5000}
-                step={50}
-                value={actionSettleMs}
-                onChange={(event) => setActionSettleMs(Number(event.target.value))}
-              />
-            </label>
-            <label>
-              {copy.doubleTapInterval}
-              <input
-                type="number"
-                min={20}
-                max={1000}
-                step={5}
-                value={doubleTapIntervalMs}
-                onChange={(event) => setDoubleTapIntervalMs(Number(event.target.value))}
-              />
-            </label>
-            <label>
-              {copy.keyboardStep}
-              <input
-                type="number"
-                min={100}
-                max={5000}
-                step={50}
-                value={keyboardStepMs}
-                onChange={(event) => setKeyboardStepMs(Number(event.target.value))}
-              />
-            </label>
-          </div>
-          <div className="capability-grid" aria-label={copy.supportedActions}>
-            {copy.capabilities.map((capability) => (
-              <span key={capability}>{capability}</span>
-            ))}
-          </div>
+          <DevicePanel
+            actionSettleMs={actionSettleMs}
+            busy={busy}
+            connected={connected}
+            copy={copy}
+            currentApp={currentApp}
+            deviceInfo={deviceInfo}
+            doctorResults={doctorResults}
+            deviceState={deviceState}
+            doubleTapIntervalMs={doubleTapIntervalMs}
+            installedApps={installedApps}
+            keyboardStepMs={keyboardStepMs}
+            onActionSettleMsChange={setActionSettleMs}
+            onCaptureScreen={captureScreen}
+            onConfirmSensitiveActionsChange={setConfirmSensitiveActions}
+            onConnectDevice={connectDevice}
+            onDisconnectDevice={disconnectDevice}
+            onDoubleTapIntervalMsChange={setDoubleTapIntervalMs}
+            onEnableAdbKeyboard={enableAdbKeyboard}
+            onKeyboardStepMsChange={setKeyboardStepMs}
+            onLaunchInstalledApp={launchInstalledApp}
+            onPreferAdbKeyboardChange={toggleAdbKeyboard}
+            onRunDirectAction={runDirectAction}
+            onRunDoctor={runDoctor}
+            preferAdbKeyboard={preferAdbKeyboard}
+            confirmSensitiveActions={confirmSensitiveActions}
+          />
         </aside>
 
-        <section className="phone-stage" aria-label={displayedScreenshot ? copy.androidScreenshot : copy.noScreenshot}>
-          {displayedScreenshot ? (
-            <div className="phone-frame">
-              <ScreenshotLightbox
-                screenshot={displayedScreenshot}
-                title={copy.androidScreenshot}
-                thumbnailAlt={copy.androidScreenshot}
-                expandedAlt={copy.expandedAndroidScreenshot}
-                thumbnailClassName="phone-screenshot-button"
-              >
-                {pendingStep ? (
-                  <ActionOverlay action={pendingStep.action} screen={displayedScreenshot.screen} />
-                ) : null}
-              </ScreenshotLightbox>
-            </div>
-          ) : null}
-        </section>
+        <PhoneStage
+          copy={copy}
+          displayedScreenshot={displayedScreenshot}
+          onRunInteractiveAction={runDirectAction}
+          pendingStep={pendingStep}
+        />
 
         <aside className="panel run-panel">
-          <div className="panel-title">
-            <MessageSquare size={18} />
-            <h2>{copy.chat}</h2>
-          </div>
-          <div className="conversation-list" aria-label={copy.conversation}>
-            {conversation.length === 0 ? <p className="muted">{copy.noMessages}</p> : null}
-            {conversation.map((message) => (
-              <article className={`chat-message ${message.role}`} key={message.id}>
-                <span>{formatConversationRole(message.role, copy)}</span>
-                <p>{message.content}</p>
-              </article>
-            ))}
-          </div>
-          <label>
-            {copy.chatMessage}
-            <textarea
-              value={chatInput}
-              onChange={(event) => setChatInput(event.target.value)}
-              rows={4}
-              placeholder={copy.chatPlaceholder}
-            />
-          </label>
-          <div className="button-row">
-            <button type="button" onClick={submitChatMessage} disabled={!chatInput.trim()}>
-              <Send size={16} />
-              {copy.send}
-            </button>
-            <button type="button" onClick={startNewChat} disabled={Boolean(busy)}>
-              <Plus size={16} />
-              {copy.newChat}
-            </button>
-          </div>
-          <label>
-            {copy.maxSteps}
-            <input
-              type="number"
-              min={1}
-              max={200}
-              value={maxSteps}
-              onChange={(event) => setMaxSteps(Number(event.target.value))}
-            />
-          </label>
-          <label className="toggle">
-            <input
-              type="checkbox"
-              checked={autoExecute}
-              onChange={(event) => setAutoExecute(event.target.checked)}
-            />
-            <span>{copy.autoExecute}</span>
-          </label>
-          <div className="button-row">
-            <button type="button" onClick={planNextStep} disabled={!canRun || autoExecute}>
-              <StepForward size={16} />
-              {copy.plan}
-            </button>
-            <button type="button" onClick={runAutoLoop} disabled={!canRun || !autoExecute}>
-              {busy === 'Run agent' ? <Loader2 className="spin" size={16} /> : <Play size={16} />}
-              {copy.run}
-            </button>
-          </div>
-          <button type="button" className="wide danger" onClick={stopRun} disabled={!busy}>
-            <CircleStop size={16} />
-            {copy.stop}
-          </button>
-          <div className="button-row">
-            <button type="button" onClick={resetSession} disabled={Boolean(busy)}>
-              <RotateCcw size={16} />
-              {copy.reset}
-            </button>
-            <button type="button" onClick={exportRunLog} disabled={logs.length === 0}>
-              <Download size={16} />
-              {copy.export}
-            </button>
-          </div>
-
-          <div className="pending-action">
-            <div className="pending-header">
-              <span>{copy.pendingAction}</span>
-              {pendingStep ? <small>{copy.step} {pendingStep.index}</small> : null}
-            </div>
-            <p>{pendingStep ? buildActionPreview(pendingStep.action) : copy.none}</p>
-            <button type="button" className="wide primary" onClick={executePendingStep} disabled={!pendingStep || Boolean(busy)}>
-              <Check size={16} />
-              {pendingButtonLabel}
-            </button>
-          </div>
+          <RunPanel
+            autoExecute={autoExecute}
+            busy={busy}
+            canRun={canRun}
+            chatInput={chatInput}
+            conversation={conversation}
+            copy={copy}
+            logsCount={logs.length}
+            maxSteps={maxSteps}
+            onAutoExecuteChange={setAutoExecute}
+            onChatInputChange={setChatInput}
+            onExecutePendingStep={executePendingStep}
+            onExportRunLog={exportRunLog}
+            onMaxStepsChange={setMaxSteps}
+            onPlanNextStep={planNextStep}
+            onResetSession={resetSession}
+            onRunAutoLoop={runAutoLoop}
+            onStartNewChat={startNewChat}
+            onStopRun={stopRun}
+            onSubmitChatMessage={submitChatMessage}
+            onTaskTemplateSelect={applyTaskTemplate}
+            pendingStep={pendingStep}
+            taskTemplates={taskTemplates}
+          />
         </aside>
       </section>
 
@@ -1113,22 +748,15 @@ function App() {
           clear: copy.clear,
           empty: copy.noEvents,
           title: copy.runLog,
+          closeScreenshotPreview: copy.closeScreenshotPreview,
+          openScreenshotFor: copy.openScreenshotFor,
+          screenshotDialogFor: copy.screenshotDialogFor,
           screenshotFor: (title) => `${copy.androidScreenshot}: ${title}`,
           expandedScreenshotFor: (title) => `${copy.expandedAndroidScreenshot}: ${title}`,
         }}
       />
     </main>
   )
-}
-
-function formatConversationRole(role: 'user' | 'assistant' | 'observation', copy: AppCopy) {
-  if (role === 'assistant') {
-    return copy.assistant
-  }
-  if (role === 'observation') {
-    return copy.observation
-  }
-  return copy.user
 }
 
 function formatDeviceState(state: DeviceState) {
@@ -1141,43 +769,6 @@ function formatDeviceState(state: DeviceState) {
   ]
     .filter(Boolean)
     .join('\n')
-}
-
-function ActionOverlay({ action, screen }: { action: AgentAction; screen: { width: number; height: number } }) {
-  if (action.action === 'tap' || action.action === 'long_press' || action.action === 'double_tap') {
-    return (
-      <span
-        className={`tap-marker ${action.action}`}
-        style={{
-          left: `${(action.x / screen.width) * 100}%`,
-          top: `${(action.y / screen.height) * 100}%`,
-        }}
-      />
-    )
-  }
-
-  if (action.action === 'swipe') {
-    return (
-      <>
-        <span
-          className="swipe-marker start"
-          style={{
-            left: `${(action.fromX / screen.width) * 100}%`,
-            top: `${(action.fromY / screen.height) * 100}%`,
-          }}
-        />
-        <span
-          className="swipe-marker end"
-          style={{
-            left: `${(action.toX / screen.width) * 100}%`,
-            top: `${(action.toY / screen.height) * 100}%`,
-          }}
-        />
-      </>
-    )
-  }
-
-  return null
 }
 
 export default App

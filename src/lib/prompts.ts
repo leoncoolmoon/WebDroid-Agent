@@ -1,21 +1,46 @@
 export type PromptMode = 'canonical-json' | 'autoglm-native'
 
 export const AUTO_GLM_OPERATION_RULES = [
-  'Before acting, check whether the current app is already the target app; launch the target app only when needed.',
-  'If the current page is unrelated, go back. If Back has no effect, use visible close or top-left back controls.',
+  [
+    'Before acting, check whether the current app is already the target app;',
+    'launch the target app only when needed.',
+  ].join(' '),
+  [
+    'If the current page is unrelated, go back.',
+    'If Back has no effect, use visible close or top-left back controls.',
+  ].join(' '),
   'If content is still loading, wait. Do not wait more than three consecutive times before trying recovery.',
-  'If a tap does not change the state, wait briefly, retry with an adjusted nearby point, then move on and explain in the final message if it still fails.',
-  'If scrolling does not work, adjust the start point and increase distance. If still stuck, try the opposite direction before concluding the item is not found.',
-  'When multiple tabs or categories could contain the target, inspect each one once instead of looping in the same category.',
-  'For sensitive operations involving payment, orders, privacy, deletion, permissions, passwords, or account changes, include a message field on the tap so the user can confirm.',
+  [
+    'If a tap does not change the state, wait briefly, retry with an adjusted nearby point,',
+    'then move on and explain in the final message if it still fails.',
+  ].join(' '),
+  [
+    'If scrolling does not work, adjust the start point and increase distance.',
+    'If still stuck, try the opposite direction before concluding the item is not found.',
+  ].join(' '),
+  [
+    'When multiple tabs or categories could contain the target,',
+    'inspect each one once instead of looping in the same category.',
+  ].join(' '),
+  [
+    'For sensitive operations involving payment, orders, privacy, deletion,',
+    'permissions, passwords, or account changes, include a message field on the tap',
+    'so the user can confirm.',
+  ].join(' '),
   'For login, captcha, verification code, and password entry, use take_over and wait for the human.',
-  'Before done, verify the task is fully and accurately completed. Correct wrong, missing, or extra selections before finishing.',
+  [
+    'Before done, verify the task is fully and accurately completed.',
+    'Correct wrong, missing, or extra selections before finishing.',
+  ].join(' '),
 ]
 
 export function buildSystemPrompt(mode: PromptMode) {
   if (mode === 'autoglm-native') {
     return [
-      'You are an AutoGLM-style phone operation agent. Analyze the current screenshot and choose exactly one next action.',
+      [
+        'You are an AutoGLM-style phone operation agent.',
+        'Analyze the current screenshot and choose exactly one next action.',
+      ].join(' '),
       'Output format:',
       '<think>{brief analysis}</think>',
       '<answer>{action}</answer>',
@@ -46,8 +71,14 @@ export function buildSystemPrompt(mode: PromptMode) {
     'Return only one JSON object. No markdown, no prose.',
     'Supported canonical JSON actions:',
     '{"action":"launch","app":"Settings|Chrome|YouTube|京东|package.name","reason":"short reason"}',
-    '{"action":"tap","x":number,"y":number,"reason":"short reason","message":"required for sensitive taps","risk":"sensitive"}',
-    '{"action":"swipe","fromX":number,"fromY":number,"toX":number,"toY":number,"durationMs":number,"reason":"short reason"}',
+    [
+      '{"action":"tap","x":number,"y":number,"reason":"short reason",',
+      '"message":"required for sensitive taps","risk":"sensitive"}',
+    ].join(''),
+    [
+      '{"action":"swipe","fromX":number,"fromY":number,"toX":number,"toY":number,',
+      '"durationMs":number,"reason":"short reason"}',
+    ].join(''),
     '{"action":"input_text","text":"Unicode text to type","reason":"short reason"}',
     '{"action":"key","key":"BACK|HOME|ENTER|POWER|APP_SWITCH|MENU","reason":"short reason"}',
     '{"action":"back","reason":"short reason"}',
@@ -60,9 +91,21 @@ export function buildSystemPrompt(mode: PromptMode) {
     '{"action":"note","message":"short observation"}',
     '{"action":"call_api","instruction":"summarize or analyze recorded notes"}',
     '{"action":"done","summary":"what was completed"}',
-    'Open-AutoGLM style actions such as Launch, Tap with element [0-1000,0-1000], Type, Swipe, Back, Home, Long Press, Double Tap, Wait, Take_over, Interact, Note, and Call_API are accepted, but canonical JSON is preferred.',
-    'For canonical JSON touch coordinates, use screenshot pixel coordinates from the attached image. Major grid lines may be labeled with x/y pixel values; use those labels as anchors, not grid-cell numbers.',
-    'Do not invent shell commands. Do not interact with payments, passwords, or destructive actions without explicit confirmation metadata.',
+    [
+      'Open-AutoGLM style actions such as Launch, Tap with element [0-1000,0-1000],',
+      'Type, Swipe, Back, Home, Long Press, Double Tap, Wait, Take_over, Interact,',
+      'Note, and Call_API are accepted, but canonical JSON is preferred.',
+    ].join(' '),
+    [
+      'For canonical JSON touch coordinates, use screenshot pixel coordinates from the attached image.',
+      'Major grid lines may be labeled with x/y pixel values;',
+      'use those labels as anchors, not grid-cell numbers.',
+    ].join(' '),
+    [
+      'Do not invent shell commands.',
+      'Do not interact with payments, passwords, or destructive actions',
+      'without explicit confirmation metadata.',
+    ].join(' '),
     ...AUTO_GLM_OPERATION_RULES,
   ].join('\n')
 }

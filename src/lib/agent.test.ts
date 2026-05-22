@@ -32,6 +32,10 @@ function fakeDevice(): DeviceBackend & { executed: string[] } {
       executed.push(action.action)
       return action.action
     }),
+    getInstalledApps: vi.fn(async () => [
+      { label: 'Gmail', packageName: 'com.google.android.gm' },
+      { packageName: 'com.android.chrome' },
+    ]),
   }
 }
 
@@ -117,6 +121,52 @@ describe('runAgentStep', () => {
     )
   })
 
+  it('passes the current app card into model requests when a package matches', async () => {
+    const device = fakeDevice()
+    const client: OpenAiClient = {
+      completeAction: vi.fn(async () => '{"action":"done","summary":"finished"}'),
+    }
+
+    await runAgentStep({
+      device,
+      client,
+      modelConfig: { baseUrl: 'https://api.example.com/v1', apiKey: 'key', model: 'm' },
+      task: 'Open a new tab',
+      promptMode: 'canonical-json',
+    })
+
+    expect(client.completeAction).toHaveBeenCalledWith(
+      expect.objectContaining({
+        appCard: expect.stringContaining('Chrome App Card'),
+      }),
+    )
+  })
+
+  it('passes installed launchable apps into model requests when the backend supports it', async () => {
+    const device = fakeDevice()
+    const client: OpenAiClient = {
+      completeAction: vi.fn(async () => '{"action":"done","summary":"finished"}'),
+    }
+
+    await runAgentStep({
+      device,
+      client,
+      modelConfig: { baseUrl: 'https://api.example.com/v1', apiKey: 'key', model: 'm' },
+      task: 'Open Gmail',
+      promptMode: 'canonical-json',
+    })
+
+    expect(device.getInstalledApps).toHaveBeenCalled()
+    expect(client.completeAction).toHaveBeenCalledWith(
+      expect.objectContaining({
+        installedApps: [
+          { label: 'Gmail', packageName: 'com.google.android.gm' },
+          { packageName: 'com.android.chrome' },
+        ],
+      }),
+    )
+  })
+
   it('asks the model about preprocessed screenshot pixels and stores mapped execution coordinates', async () => {
     const device = fakePreprocessedDevice()
     const client: OpenAiClient = {
@@ -162,6 +212,35 @@ describe('runAgentStep', () => {
       expect.objectContaining({
         currentApp: 'Unknown',
         deviceState: { app: 'Unknown' },
+      }),
+    )
+  })
+
+  it('repairs invalid model actions once before returning the step', async () => {
+    const device = fakeDevice()
+    const client = {
+      completeAction: vi.fn(async () => '{"action":"tap","x":9999,"y":200}'),
+      repairAction: vi.fn(async () => '{"action":"tap","x":100,"y":200,"reason":"fixed"}'),
+    }
+
+    const step = await runAgentStep({
+      device,
+      client,
+      modelConfig: { baseUrl: 'https://api.example.com/v1', apiKey: 'key', model: 'm' },
+      task: 'Open app',
+      promptMode: 'canonical-json',
+    })
+
+    expect(step.modelOutput).toBe('{"action":"tap","x":100,"y":200,"reason":"fixed"}')
+    expect(step.action).toEqual({ action: 'tap', x: 100, y: 200, reason: 'fixed' })
+    expect(step.preview).toBe('tap (100, 200) - fixed')
+    expect(client.repairAction).toHaveBeenCalledWith(
+      expect.objectContaining({
+        invalidOutput: '{"action":"tap","x":9999,"y":200}',
+        validationError: expect.stringContaining('outside the current screen'),
+        screenshotDataUrl: 'data:image/png;base64,abc',
+        screen: { width: 1080, height: 2400 },
+        currentApp: 'Chrome',
       }),
     )
   })

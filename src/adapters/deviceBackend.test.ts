@@ -12,10 +12,14 @@ import {
   isAndroidInputTextSafe,
   isAdbKeyboardInstalled,
   keyToAndroidKeyCode,
+  parseInstalledAppsFromPackageOutput,
   parseCurrentAppFromDumpsys,
   parseDeviceStateFromDumpsys,
   parsePngSize,
+  resolveInstalledAppPackage,
+  resolveAppNameFromPackage,
   resolveAppPackage,
+  retryDeviceOperation,
 } from './deviceBackend'
 
 describe('buildInputCommand', () => {
@@ -71,6 +75,17 @@ describe('buildInputCommandSequence', () => {
     ])
     expect(buildInputCommandSequence({ action: 'launch', app: 'com.example.app' })).toEqual([
       ['monkey', '-p', 'com.example.app', '-c', 'android.intent.category.LAUNCHER', '1'],
+      { waitMs: AUTO_GLM_ACTION_SETTLE_DELAY_MS },
+    ])
+  })
+
+  it('builds launch commands from installed app labels', () => {
+    expect(
+      buildInputCommandSequence({ action: 'launch', app: 'Notes' }, DEFAULT_DEVICE_TIMING, [
+        { label: 'Notes', packageName: 'com.example.notes' },
+      ]),
+    ).toEqual([
+      ['monkey', '-p', 'com.example.notes', '-c', 'android.intent.category.LAUNCHER', '1'],
       { waitMs: AUTO_GLM_ACTION_SETTLE_DELAY_MS },
     ])
   })
@@ -195,6 +210,64 @@ describe('resolveAppPackage', () => {
     expect(resolveAppPackage('京东')).toBe('com.jingdong.app.mall')
     expect(resolveAppPackage('YouTube')).toBe('com.google.android.youtube')
   })
+
+  it('keeps package display names independent from app alias order', () => {
+    expect(resolveAppNameFromPackage('com.jingdong.app.mall')).toBe('京东')
+    expect(resolveAppNameFromPackage('com.google.android.apps.maps')).toBe('maps')
+    expect(resolveAppNameFromPackage('com.twitter.android')).toBe('x')
+  })
+})
+
+describe('installed app parsing and matching', () => {
+  it('parses launcher activities from Android package query output', () => {
+    const apps = parseInstalledAppsFromPackageOutput(`
+ResolveInfo:
+  ActivityInfo:
+    name=com.google.android.gm.ConversationListActivityGmail
+    packageName=com.google.android.gm
+    nonLocalizedLabel=Gmail
+ResolveInfo:
+  ActivityInfo:
+    name=com.android.settings.Settings
+    packageName=com.android.settings
+    nonLocalizedLabel=null
+com.android.chrome/com.google.android.apps.chrome.Main
+package:com.example.notes
+`)
+
+    expect(apps).toEqual([
+      {
+        packageName: 'com.google.android.gm',
+        activity: 'com.google.android.gm.ConversationListActivityGmail',
+        label: 'Gmail',
+      },
+      {
+        packageName: 'com.android.settings',
+        activity: 'com.android.settings.Settings',
+      },
+      {
+        packageName: 'com.android.chrome',
+        activity: 'com.google.android.apps.chrome.Main',
+      },
+      {
+        packageName: 'com.example.notes',
+      },
+    ])
+  })
+
+  it('matches natural app names against installed labels, aliases, and package tokens', () => {
+    const apps = parseInstalledAppsFromPackageOutput(`
+      packageName=com.google.android.gm
+      nonLocalizedLabel=Gmail
+      packageName=com.android.chrome
+      packageName=com.example.notes
+    `)
+
+    expect(resolveInstalledAppPackage('Gmail', apps)).toBe('com.google.android.gm')
+    expect(resolveInstalledAppPackage('浏览器', apps)).toBe('com.android.chrome')
+    expect(resolveInstalledAppPackage('notes', apps)).toBe('com.example.notes')
+    expect(resolveInstalledAppPackage('com.example.notes', apps)).toBe('com.example.notes')
+  })
 })
 
 describe('parseCurrentAppFromDumpsys', () => {
@@ -293,5 +366,60 @@ describe('parsePngSize', () => {
 
   it('rejects non-PNG bytes', () => {
     expect(() => parsePngSize(new Uint8Array([1, 2, 3]))).toThrow('PNG')
+  })
+})
+
+describe('retryDeviceOperation', () => {
+  it('retries transient state failures with delays and one recovery hook', async () => {
+    const delays: number[] = []
+    let attempts = 0
+    let recoveries = 0
+
+    const result = await retryDeviceOperation(
+      async () => {
+        attempts += 1
+        if (attempts < 4) {
+          throw new Error(`state read failed ${attempts}`)
+        }
+        return 'ready'
+      },
+      {
+        label: 'device state',
+        maxAttempts: 4,
+        retryDelaysMs: [10, 20, 30],
+        recoverAfterAttempt: 2,
+        recover: async () => {
+          recoveries += 1
+        },
+        wait: async (ms) => {
+          delays.push(ms)
+        },
+      },
+    )
+
+    expect(result).toBe('ready')
+    expect(attempts).toBe(4)
+    expect(recoveries).toBe(1)
+    expect(delays).toEqual([10, 20, 30])
+  })
+
+  it('throws a contextual error after all retry attempts fail', async () => {
+    let attempts = 0
+
+    await expect(
+      retryDeviceOperation(
+        async () => {
+          attempts += 1
+          throw new Error('dumpsys unavailable')
+        },
+        {
+          label: 'device state',
+          maxAttempts: 3,
+          retryDelaysMs: [1],
+          wait: async () => {},
+        },
+      ),
+    ).rejects.toThrow('Failed to get device state after 3 attempts: dumpsys unavailable')
+    expect(attempts).toBe(3)
   })
 })

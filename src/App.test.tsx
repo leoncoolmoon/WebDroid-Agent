@@ -1,15 +1,19 @@
 // @vitest-environment jsdom
+/// <reference types="node" />
 
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
+import { readFileSync } from 'node:fs'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
-import appCss from './App.css?raw'
+import responsiveCss from './styles/responsive.css?raw'
 
 const backendMock = vi.hoisted(() => ({
   connect: vi.fn(),
   disconnect: vi.fn(),
   screenshot: vi.fn(),
   getDeviceState: vi.fn(),
+  getInputMethods: vi.fn(),
+  getInstalledApps: vi.fn(),
   enableAdbKeyboard: vi.fn(),
   execute: vi.fn(),
   setPreferAdbKeyboard: vi.fn(),
@@ -45,7 +49,35 @@ function readMediaBlock(css: string, query: string) {
   return css.slice(start)
 }
 
-describe('App run log', () => {
+function mockSystemColorScheme(matches: boolean) {
+  const listeners = new Set<(event: MediaQueryListEvent) => void>()
+
+  Object.defineProperty(window, 'matchMedia', {
+    configurable: true,
+    value: vi.fn().mockImplementation((query: string) => ({
+      matches,
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn((event: string, listener: (event: MediaQueryListEvent) => void) => {
+        if (event === 'change') {
+          listeners.add(listener)
+        }
+      }),
+      removeEventListener: vi.fn((event: string, listener: (event: MediaQueryListEvent) => void) => {
+        if (event === 'change') {
+          listeners.delete(listener)
+        }
+      }),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+  })
+}
+
+const layoutCss = readFileSync('src/styles/layout.css', 'utf8')
+
+describe('App', () => {
   beforeEach(() => {
     const values = new Map<string, string>()
     const storage = {
@@ -62,6 +94,11 @@ describe('App run log', () => {
       value: storage,
     })
     document.documentElement.removeAttribute('data-theme')
+    document.documentElement.removeAttribute('data-system-theme')
+    Object.defineProperty(window, 'matchMedia', {
+      configurable: true,
+      value: undefined,
+    })
 
     backendMock.connect.mockResolvedValue({
       serial: 'device-1',
@@ -75,13 +112,26 @@ describe('App run log', () => {
     backendMock.getDeviceState.mockResolvedValue({
       app: 'Chrome',
       packageName: 'com.android.chrome',
+      keyboard: 'com.android.adbkeyboard/.AdbIME',
     })
+    backendMock.getInputMethods.mockResolvedValue('com.android.adbkeyboard/.AdbIME')
+    backendMock.getInstalledApps.mockResolvedValue([
+      {
+        label: 'Gmail',
+        packageName: 'com.google.android.gm',
+      },
+      {
+        label: 'Chrome',
+        packageName: 'com.android.chrome',
+      },
+    ])
     backendMock.enableAdbKeyboard.mockResolvedValue('enabled')
     backendMock.execute.mockResolvedValue('ok')
     Object.defineProperty(globalThis, 'fetch', {
       configurable: true,
       value: vi.fn().mockResolvedValue({
         ok: true,
+        status: 200,
         json: vi.fn().mockResolvedValue({
           stargazers_count: 123,
           forks_count: 45,
@@ -96,9 +146,18 @@ describe('App run log', () => {
     localStorage.clear()
   })
 
+  it('renders the WebDroid Agent logo in the topbar', () => {
+    render(<App />)
+
+    const logo = screen.getByRole('img', { name: /webdroid agent logo/i })
+
+    expect(logo.getAttribute('src')).toBe('/webdroid-agent-logo.png')
+  })
+
   it('clears run log entries from the log section', () => {
     render(<App />)
 
+    fireEvent.click(screen.getByText('Run options'))
     fireEvent.click(screen.getByRole('button', { name: /reset/i }))
     expect(screen.getByText('Agent context reset')).toBeTruthy()
 
@@ -111,10 +170,21 @@ describe('App run log', () => {
   it('renders advanced optimization controls', () => {
     render(<App />)
 
+    fireEvent.click(screen.getByText('Model settings'))
+    fireEvent.click(screen.getByText('Device options'))
+
     expect(screen.getByLabelText(/stream model responses/i)).toBeTruthy()
     expect(screen.getByLabelText(/action settle/i)).toBeTruthy()
     expect(screen.getByLabelText(/double tap interval/i)).toBeTruthy()
     expect(screen.getByLabelText(/keyboard step/i)).toBeTruthy()
+  })
+
+  it('labels sensitive action confirmation by its full action scope', () => {
+    render(<App />)
+
+    fireEvent.click(screen.getByText('Device options'))
+    expect(screen.getByLabelText(/confirm sensitive actions/i)).toBeTruthy()
+    expect(screen.queryByLabelText(/confirm sensitive taps/i)).toBeNull()
   })
 
   it('collapses model settings behind the current model name', () => {
@@ -128,6 +198,33 @@ describe('App run log', () => {
     expect(details?.hasAttribute('open')).toBe(false)
   })
 
+  it('keeps low-frequency homepage sections collapsed by default', () => {
+    render(<App />)
+
+    for (const summary of [
+      'Conversation',
+      'Run options',
+      'Installed apps',
+      'Direct commands',
+      'Device options',
+    ]) {
+      const details = screen.getByText(summary).closest('details')
+      expect(details).toBeTruthy()
+      expect(details?.hasAttribute('open')).toBe(false)
+    }
+  })
+
+  it('styles collapsed sections as compact tool rows with custom affordances', () => {
+    expect(layoutCss).toContain('.compact-section > summary::marker')
+    expect(layoutCss).toContain('.compact-section > summary::-webkit-details-marker')
+    expect(layoutCss).toContain('.compact-section > summary::before')
+    expect(layoutCss).toContain('.compact-section > summary::after')
+    expect(layoutCss).toMatch(/\.compact-section > summary:hover[\s\S]*background:/)
+    expect(layoutCss).toMatch(/\.compact-section > summary:focus-visible[\s\S]*outline:/)
+    expect(layoutCss).toMatch(/\.compact-section\[open\] > summary::after[\s\S]*rotate/)
+    expect(layoutCss).toContain('.compact-section .direct-command-panel')
+  })
+
   it('opens settings with repository stats from the top right', async () => {
     render(<App />)
 
@@ -136,7 +233,7 @@ describe('App run log', () => {
 
     expect(await screen.findByRole('dialog', { name: /settings/i })).toBeTruthy()
     expect(screen.getByRole('link', { name: /github repository/i }).getAttribute('href')).toBe(
-      'https://github.com/yeahhe365/webadb-autoglm',
+      'https://github.com/yeahhe365/WebDroid-Agent',
     )
     expect(await screen.findByText('123')).toBeTruthy()
     expect(screen.getByText('45')).toBeTruthy()
@@ -164,6 +261,26 @@ describe('App run log', () => {
     )
   })
 
+  it('tracks system dark mode only while the theme is set to system', async () => {
+    mockSystemColorScheme(true)
+
+    render(<App />)
+
+    expect(document.documentElement.dataset.theme).toBe('system')
+    expect(document.documentElement.dataset.systemTheme).toBe('dark')
+
+    fireEvent.click(screen.getByRole('button', { name: /settings/i }))
+    const themeSelect = await screen.findByLabelText(/theme/i)
+
+    fireEvent.change(themeSelect, { target: { value: 'light' } })
+    expect(document.documentElement.dataset.theme).toBe('light')
+    expect(document.documentElement.dataset.systemTheme).toBeUndefined()
+
+    fireEvent.change(themeSelect, { target: { value: 'system' } })
+    expect(document.documentElement.dataset.theme).toBe('system')
+    expect(document.documentElement.dataset.systemTheme).toBe('dark')
+  })
+
   it('changes and persists the app language from settings', async () => {
     render(<App />)
 
@@ -180,6 +297,19 @@ describe('App run log', () => {
     )
   })
 
+  it('localizes screenshot preview labels after changing language', async () => {
+    render(<App />)
+
+    fireEvent.click(screen.getByRole('button', { name: /settings/i }))
+    const languageSelect = await screen.findByLabelText(/language/i)
+    fireEvent.change(languageSelect, { target: { value: 'zh-CN' } })
+    fireEvent.click(screen.getByRole('button', { name: /^关闭设置$/i }))
+
+    fireEvent.click(screen.getAllByRole('button', { name: /^连接$/i })[0])
+
+    expect(await screen.findByRole('button', { name: '打开截图：Android 截图' })).toBeTruthy()
+  })
+
   it('keeps follow-up user messages in a continuous chat transcript', () => {
     render(<App />)
 
@@ -190,6 +320,7 @@ describe('App run log', () => {
     })
     fireEvent.click(screen.getByRole('button', { name: /send/i }))
 
+    fireEvent.click(screen.getByText('Conversation'))
     const conversation = screen.getByLabelText('Conversation')
     expect(within(conversation).getByText('Open Settings and show the Wi-Fi page.')).toBeTruthy()
     expect(within(conversation).getByText('Now open the Bluetooth page.')).toBeTruthy()
@@ -202,6 +333,20 @@ describe('App run log', () => {
     expect(within(emptyConversation).getByText('No messages yet')).toBeTruthy()
   })
 
+  it('fills the chat input from a task template without sending it', () => {
+    render(<App />)
+
+    const templateSelect = screen.getByLabelText(/task template/i)
+    fireEvent.change(templateSelect, { target: { value: 'launch-app' } })
+
+    expect((screen.getByLabelText(/chat message/i) as HTMLTextAreaElement).value).toBe(
+      'Launch the app named <app name>, wait until it is fully visible, and report the current screen.',
+    )
+    fireEvent.click(screen.getByText('Conversation'))
+    const conversation = screen.getByLabelText('Conversation')
+    expect(within(conversation).queryByText(/Launch the app named/)).toBeNull()
+  })
+
   it('captures and displays a screenshot immediately after connecting', async () => {
     render(<App />)
 
@@ -212,6 +357,101 @@ describe('App run log', () => {
 
     expect(await screen.findByRole('dialog', { name: /android screenshot/i })).toBeTruthy()
     expect(screen.getByAltText('Expanded screenshot for Android screenshot')).toBeTruthy()
+  })
+
+  it('runs device doctor checks from the device panel', async () => {
+    render(<App />)
+
+    fireEvent.click(screen.getByText('Model settings'))
+    fireEvent.change(screen.getByLabelText(/api key/i), {
+      target: { value: 'secret' },
+    })
+    fireEvent.click(screen.getAllByRole('button', { name: /connect/i })[0])
+    expect(await screen.findByText('Pixel')).toBeTruthy()
+
+    fireEvent.click(screen.getByRole('button', { name: /run doctor/i }))
+
+    expect(await screen.findByText('Doctor checks')).toBeTruthy()
+    fireEvent.click(screen.getByText('Doctor checks'))
+    const doctorChecks = screen.getByLabelText('Doctor checks')
+    expect(within(doctorChecks).getByText('WebUSB')).toBeTruthy()
+    expect(within(doctorChecks).getByText('Screenshot')).toBeTruthy()
+    expect(within(doctorChecks).getByText('Screen size')).toBeTruthy()
+    expect(within(doctorChecks).getByText('Current app')).toBeTruthy()
+    expect(within(doctorChecks).getByText('ADB Keyboard')).toBeTruthy()
+    expect(within(doctorChecks).getByText('Model API')).toBeTruthy()
+    expect(within(doctorChecks).getByText('1080x2400')).toBeTruthy()
+    expect(within(doctorChecks).getByText(/Chrome/)).toBeTruthy()
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      'https://api.openai.com/v1/models',
+      expect.objectContaining({
+        headers: expect.objectContaining({ Authorization: 'Bearer secret' }),
+      }),
+    )
+  })
+
+  it('runs direct tap commands from the device panel', async () => {
+    render(<App />)
+
+    fireEvent.click(screen.getAllByRole('button', { name: /connect/i })[0])
+    expect(await screen.findByText('Pixel')).toBeTruthy()
+
+    fireEvent.click(screen.getByText('Direct commands'))
+    fireEvent.change(screen.getByLabelText(/tap x/i), { target: { value: '120' } })
+    fireEvent.change(screen.getByLabelText(/tap y/i), { target: { value: '340' } })
+    fireEvent.click(screen.getByRole('button', { name: /run tap/i }))
+
+    expect(backendMock.execute).toHaveBeenCalledWith({ action: 'tap', x: 120, y: 340 })
+    expect(await screen.findByText('Direct command')).toBeTruthy()
+  })
+
+  it('runs tap actions generated by clicking the live screenshot', async () => {
+    render(<App />)
+
+    fireEvent.click(screen.getAllByRole('button', { name: /connect/i })[0])
+    expect(await screen.findByAltText('Android screenshot')).toBeTruthy()
+
+    const layer = screen.getByLabelText('Screenshot interaction layer')
+    vi.spyOn(layer, 'getBoundingClientRect').mockReturnValue({
+      bottom: 620,
+      height: 600,
+      left: 10,
+      right: 280,
+      top: 20,
+      width: 270,
+      x: 10,
+      y: 20,
+      toJSON: () => ({}),
+    })
+
+    fireEvent.mouseDown(layer, { clientX: 145, clientY: 320 })
+    fireEvent.mouseUp(layer, { clientX: 145, clientY: 320 })
+    fireEvent.click(screen.getByRole('button', { name: 'Run generated action' }))
+
+    expect(backendMock.execute).toHaveBeenCalledWith({ action: 'tap', x: 540, y: 1200 })
+  })
+
+  it('searches installed apps and launches the selected package', async () => {
+    render(<App />)
+
+    fireEvent.click(screen.getAllByRole('button', { name: /connect/i })[0])
+    expect(await screen.findByText('Pixel')).toBeTruthy()
+
+    fireEvent.click(screen.getByText('Installed apps'))
+    const appSearch = await screen.findByLabelText(/app search/i)
+    fireEvent.change(appSearch, { target: { value: 'gm' } })
+
+    expect(screen.getByText('Gmail')).toBeTruthy()
+    expect(screen.getByText('com.google.android.gm')).toBeTruthy()
+    expect(screen.queryByText('Chrome')).toBeNull()
+
+    fireEvent.click(screen.getByRole('button', { name: /launch gmail/i }))
+
+    expect(backendMock.execute).toHaveBeenCalledWith({
+      action: 'launch',
+      app: 'Gmail',
+      packageName: 'com.google.android.gm',
+    })
   })
 
   it('collapses connected device details behind the device name', async () => {
@@ -228,7 +468,7 @@ describe('App run log', () => {
   })
 
   it('keeps the top bar horizontal at tablet-width viewports', () => {
-    const tabletBreakpoint = readMediaBlock(appCss, 'max-width: 1120px')
+    const tabletBreakpoint = readMediaBlock(responsiveCss, 'max-width: 1120px')
 
     expect(tabletBreakpoint).not.toMatch(/\.topbar\s*\{[\s\S]*?flex-direction:\s*column/)
   })
