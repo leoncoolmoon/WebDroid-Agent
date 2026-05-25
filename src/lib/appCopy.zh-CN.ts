@@ -30,6 +30,34 @@ export const ZH_CN_COPY = {
     '登录、支付、删除、授权等高风险流程建议保持人工确认。',
     '常用应用可以在设置里编辑 App Cards，Secret 和 Custom Tools 也只保存在本机浏览器。',
   ],
+  tutorialFaqTitle: '常见问题',
+  tutorialFaqItems: [
+    {
+      question: '连接不上设备怎么办？',
+      answer:
+        '如果连接不上，请在终端输入 adb kill-server，然后重新连接设备。也请确认浏览器支持 WebUSB、手机已开启 USB 调试，并在手机上完成授权。',
+    },
+    {
+      question: '为什么 Agent 没有继续执行？',
+      answer:
+        '检查 Base URL、API Key、Model 和动作协议是否匹配；也可以运行 Doctor 查看模型与设备连接状态。',
+    },
+    {
+      question: '点击位置不准怎么办？',
+      answer:
+        '先手动截图确认画面和坐标正常。任务运行时会把模型截图坐标映射回设备原始坐标。',
+    },
+    {
+      question: '中文输入或清空文本失败怎么办？',
+      answer:
+        '在设备面板使用“配置文本输入”启用 ADB Keyboard，并在设备选项里开启“文本输入使用 ADB 键盘”。',
+    },
+    {
+      question: '登录、支付或验证码怎么处理？',
+      answer:
+        '保持敏感动作确认开启；遇到验证码、密码、支付、删除或授权等高风险流程时人工接管。',
+    },
+  ],
   agentContextRestored: '已恢复 Agent 上下文',
   agentContextRestoreSkipped: '已跳过 Agent 上下文恢复',
   connectDeviceTask: '连接设备',

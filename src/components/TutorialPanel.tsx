@@ -60,6 +60,18 @@ export function TutorialPanel({ copy, onClose }: TutorialPanelProps) {
           ))}
         </ul>
       </div>
+
+      <div className="tutorial-faq">
+        <h3>{copy.tutorialFaqTitle}</h3>
+        <div className="tutorial-faq-list">
+          {copy.tutorialFaqItems.map((item) => (
+            <article key={item.question}>
+              <h4>{item.question}</h4>
+              <p>{item.answer}</p>
+            </article>
+          ))}
+        </div>
+      </div>
     </section>
   )
 }

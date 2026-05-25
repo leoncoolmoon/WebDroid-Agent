@@ -30,6 +30,34 @@ export const EN_US_COPY = {
     'Keep human confirmation enabled for login, payment, deletion, authorization, and other high-risk flows.',
     'Edit App Cards in settings for common apps; Secrets and Custom Tools stay in this local browser.',
   ],
+  tutorialFaqTitle: 'FAQ',
+  tutorialFaqItems: [
+    {
+      question: 'What should I do if the device will not connect?',
+      answer:
+        'If the connection fails, run adb kill-server in your terminal, then reconnect the device. Also confirm WebUSB support, enable USB debugging, and approve the prompt on the phone.',
+    },
+    {
+      question: 'Why does the agent stop before running?',
+      answer:
+        'Check Base URL, API Key, Model, and action protocol. You can also run Doctor to inspect model and device connectivity.',
+    },
+    {
+      question: 'What if taps land in the wrong place?',
+      answer:
+        'Capture a fresh screenshot first and confirm the preview is current. The app maps model screenshot coordinates back to the native device screen before execution.',
+    },
+    {
+      question: 'What if Chinese text or clearing text fails?',
+      answer:
+        'Use Configure text input to install or enable ADB Keyboard, then enable Use ADB Keyboard for text in device options.',
+    },
+    {
+      question: 'How are login, payment, and verification-code flows handled?',
+      answer:
+        'Keep sensitive action confirmation enabled. Take over manually for passwords, verification codes, payments, deletion, and authorization steps.',
+    },
+  ],
   agentContextRestored: 'Agent context restored',
   agentContextRestoreSkipped: 'Agent context restore skipped',
   connectDeviceTask: 'Connect device',

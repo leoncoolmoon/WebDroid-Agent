@@ -66,7 +66,8 @@
 }
 
 .tutorial-steps h3,
-.tutorial-notes h3 {
+.tutorial-notes h3,
+.tutorial-faq h3 {
   color: var(--text);
   font-size: 14px;
   line-height: 1.25;
@@ -99,4 +100,38 @@
   line-height: 1.45;
   margin: 10px 0 0;
   padding-left: 18px;
+}
+
+.tutorial-faq {
+  display: grid;
+  gap: 10px;
+}
+
+.tutorial-faq-list {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.tutorial-faq article {
+  background: var(--subtle-bg);
+  border: 1px solid var(--surface-muted-border);
+  border-radius: 8px;
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+}
+
+.tutorial-faq h4 {
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.3;
+  margin: 0;
+}
+
+.tutorial-faq p {
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.45;
+  margin: 0;
 }

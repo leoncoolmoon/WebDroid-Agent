@@ -1,5 +1,4 @@
 import {
-  CircleHelp,
   CircleStop,
   KeyRound,
   Link,
@@ -139,31 +138,15 @@ export function DevicePanel({
             </>
           )}
         </div>
-        <div className="adb-connect-row">
-          <div className="button-row">
-            <button type="button" onClick={onConnectDevice} disabled={isBusy || connected}>
-              <Link size={16} />
-              {copy.connect}
-            </button>
-            <button type="button" onClick={onDisconnectDevice} disabled={isBusy || !connected}>
-              <CircleStop size={16} />
-              {copy.disconnect}
-            </button>
-          </div>
-          <span className="adb-help">
-            <button
-              type="button"
-              className="icon-button adb-help-trigger"
-              aria-label={copy.adbConnectionHelpLabel}
-              aria-describedby="adb-connection-help"
-              title={copy.adbConnectionHelpText}
-            >
-              <CircleHelp size={16} />
-            </button>
-            <span className="adb-help-tooltip" id="adb-connection-help" role="tooltip">
-              {copy.adbConnectionHelpText}
-            </span>
-          </span>
+        <div className="button-row">
+          <button type="button" onClick={onConnectDevice} disabled={isBusy || connected}>
+            <Link size={16} />
+            {copy.connect}
+          </button>
+          <button type="button" onClick={onDisconnectDevice} disabled={isBusy || !connected}>
+            <CircleStop size={16} />
+            {copy.disconnect}
+          </button>
         </div>
         <button
           type="button"

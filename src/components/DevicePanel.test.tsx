@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen, within } from '@testing-library/react'
+import { cleanup, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { APP_COPY } from '../lib/appCopy'
 import { DevicePanel } from './DevicePanel'
@@ -51,16 +51,10 @@ describe('DevicePanel', () => {
     cleanup()
   })
 
-  it('shows an ADB connection recovery hint next to the connect controls', () => {
+  it('keeps ADB recovery guidance out of the device panel help button', () => {
     renderDevicePanel()
 
-    const help = screen.getByRole('button', { name: 'ADB 连接帮助' })
-
-    expect(help.closest('.adb-help')).toBeTruthy()
-    expect(
-      within(help.closest('.adb-help') as HTMLElement).getByText(
-        '如果连接不上，请在终端输入 adb kill-server，然后重新连接设备。',
-      ),
-    ).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'ADB 连接帮助' })).toBeNull()
+    expect(document.querySelector('.adb-help')).toBeNull()
   })
 })

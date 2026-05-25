@@ -237,6 +237,11 @@ describe('App', () => {
     const tutorial = screen.getByRole('region', { name: /tutorial/i })
     expect(within(tutorial).getByText('Quick start')).toBeTruthy()
     expect(within(tutorial).getByText('Connect Android device')).toBeTruthy()
+    expect(within(tutorial).getByText('FAQ')).toBeTruthy()
+    expect(
+      within(tutorial).getByText(/If the connection fails, run adb kill-server/),
+    ).toBeTruthy()
+    expect(within(tutorial).getByText('What if taps land in the wrong place?')).toBeTruthy()
 
     fireEvent.click(tutorialButton)
 
