@@ -12,7 +12,7 @@
     "preview": "vite preview",
     "start": "node server/index.js",
     "docker:build": "docker build -t webdroid-agent .",
-    "deploy:pages": "npm run build && git push origin main"
+    "deploy:pages": "npm run build && git push origin depBranch"
   },
   "dependencies": {
     "@yume-chan/adb": "^2.6.0",
