@@ -127,7 +127,9 @@ export function buildChatCompletionPayload({
     ...(actionProtocol === 'webdroid_json'
       ? { response_format: { type: 'json_object' as const } }
       : {}),
-    ...(reasoningEffort ? { reasoning_effort: reasoningEffort } : {}),
+    ...(reasoningEffort && reasoningEffort !== 'none'
+      ? { reasoning_effort: reasoningEffort }
+      : {}),
     ...(stream ? { stream: true } : {}),
     messages,
   }
@@ -233,7 +235,9 @@ export function buildFinalResponsePayload({
     model,
     temperature: 0.2,
     max_tokens: 700,
-    ...(reasoningEffort ? { reasoning_effort: reasoningEffort } : {}),
+    ...(reasoningEffort && reasoningEffort !== 'none'
+      ? { reasoning_effort: reasoningEffort }
+      : {}),
     ...(stream ? { stream: true } : {}),
     messages,
   }

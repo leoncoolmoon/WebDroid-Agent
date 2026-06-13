@@ -199,7 +199,9 @@ export async function runDeviceDoctor({
               'model_api',
               'Model API',
               `/models responded with ${response.status}.`,
-              'Check the Base URL, API key, provider CORS policy, and model access.',
+              response.status === 400
+                ? 'Check model JSON mode and vision support. Verify the Base URL and API key.'
+                : 'Check the Base URL, API key, provider CORS policy, and model access.',
             ),
       )
     } catch (caught) {

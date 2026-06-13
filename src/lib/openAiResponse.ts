@@ -69,12 +69,23 @@ export async function readStreamingAssistantText(response: Response) {
 }
 
 export function formatApiError(status: number, body: unknown) {
+  if (typeof body === 'string' && body.trim()) {
+    return `Model API failed with ${status}: ${body.trim()}`
+  }
+
   if (isRecord(body)) {
     const error = body.error
     if (isRecord(error) && typeof error.message === 'string') {
       return `Model API failed with ${status}: ${error.message}`
     }
+    if (typeof body.message === 'string') {
+      return `Model API failed with ${status}: ${body.message}`
+    }
+    if (typeof error === 'string' && error.trim()) {
+      return `Model API failed with ${status}: ${error.trim()}`
+    }
   }
+
   return `Model API failed with ${status}.`
 }
 

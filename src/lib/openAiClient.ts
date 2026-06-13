@@ -31,7 +31,10 @@ export {
 } from './openAiTypes'
 
 export function normalizeBaseUrl(baseUrl: string) {
-  return baseUrl.trim().replace(/\/+$/, '')
+  return baseUrl
+    .trim()
+    .replace(/\/+$/, '')
+    .replace(/\/chat\/completions$/, '')
 }
 
 export const DEFAULT_OPENAI_RETRY_DELAYS_MS = [500, 1000] as const
@@ -83,13 +86,13 @@ export function createOpenAiClient(
 
     if (request.stream) {
       if (!response.ok) {
-        const body = await readJsonOrUndefined(response)
+        const body = await readErrorBody(response)
         throw new OpenAiClientError(formatApiError(response.status, body))
       }
       return readStreamingAssistantText(response)
     }
 
-    const body = await readJsonOrUndefined(response)
+    const body = await (response.ok ? readJsonOrUndefined(response) : readErrorBody(response))
 
     if (!response.ok) {
       throw new OpenAiClientError(formatApiError(response.status, body))
@@ -197,6 +200,19 @@ function isAbortError(error: unknown) {
     (error instanceof DOMException && error.name === 'AbortError') ||
     (error instanceof Error && error.name === 'AbortError')
   )
+}
+
+async function readErrorBody(response: Response): Promise<unknown> {
+  try {
+    const text = await response.text()
+    try {
+      return JSON.parse(text)
+    } catch {
+      return text
+    }
+  } catch {
+    return undefined
+  }
 }
 
 function buildRepairTask(request: RepairActionRequest) {
