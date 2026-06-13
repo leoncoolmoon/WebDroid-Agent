@@ -112,6 +112,45 @@ export function createOpenAiClient(
   return {
     completeAction,
     completeFinalResponse,
+    async testConnectivity(request) {
+      const payload: ChatCompletionPayload = {
+        model: request.model,
+        temperature: 0.1,
+        max_tokens: 200,
+        messages: [{ role: 'user', content: request.prompt }],
+      }
+
+      const proxyUrl = options.proxyUrl?.trim()
+      const url = proxyUrl || `${normalizeBaseUrl(request.baseUrl)}/chat/completions`
+
+      const response = await fetcher(url, {
+        method: 'POST',
+        headers: proxyUrl
+          ? { 'Content-Type': 'application/json' }
+          : {
+              Authorization: `Bearer ${request.apiKey}`,
+              'Content-Type': 'application/json',
+            },
+        signal: request.signal,
+        body: JSON.stringify(
+          proxyUrl
+            ? {
+                baseUrl: request.baseUrl,
+                apiKey: request.apiKey,
+                payload,
+              }
+            : payload,
+        ),
+      })
+
+      const responseBody = await readErrorBody(response)
+
+      return {
+        requestPayload: payload,
+        responseStatus: response.status,
+        responseBody,
+      }
+    },
     repairAction(request) {
       return completeAction({
         ...request,

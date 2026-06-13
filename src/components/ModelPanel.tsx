@@ -11,6 +11,7 @@ export type ModelPanelProps = {
   onActionProtocolChange: (value: ActionProtocol) => void
   onModelConfigChange: <Key extends keyof ModelConfig>(key: Key, value: ModelConfig[Key]) => void
   onStreamResponsesChange: (value: boolean) => void
+  onTestConnectivity: () => void
   streamResponses: boolean
 }
 
@@ -21,6 +22,7 @@ export function ModelPanel({
   onActionProtocolChange,
   onModelConfigChange,
   onStreamResponsesChange,
+  onTestConnectivity,
   streamResponses,
 }: ModelPanelProps) {
   const apiKeyInputId = useId()
@@ -34,7 +36,17 @@ export function ModelPanel({
         <h2>{copy.model}</h2>
       </div>
       <div className="model-box">
-        <span>{modelConfig.model || copy.noModel}</span>
+        <div className="model-box-header">
+          <span>{modelConfig.model || copy.noModel}</span>
+          <button
+            type="button"
+            className="secondary-button test-connectivity-button"
+            onClick={onTestConnectivity}
+            disabled={!modelConfig.baseUrl || !modelConfig.apiKey || !modelConfig.model}
+          >
+            {copy.testModel}
+          </button>
+        </div>
         <details className="model-details">
           <summary>{copy.modelSettings}</summary>
           <label>

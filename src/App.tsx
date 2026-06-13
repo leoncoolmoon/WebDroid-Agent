@@ -290,6 +290,41 @@ function App() {
     })
   }
 
+  async function handleTestModelConnectivity() {
+    if (busyTask) {
+      return
+    }
+
+    await runTask(copy.testModelConnectivityTask, async () => {
+      if (!client.testConnectivity) {
+        throw new Error('Model client does not support connectivity testing.')
+      }
+
+      const result = await client.testConnectivity({
+        ...modelConfig,
+        prompt: copy.testModelPrompt,
+      })
+
+      const tone = result.responseStatus >= 200 && result.responseStatus < 300 ? 'ok' : 'error'
+
+      addLog({
+        tone,
+        title: copy.testModelConnectivityTask,
+        detail: [
+          `Status: ${result.responseStatus}`,
+          '',
+          '--- Request Payload ---',
+          JSON.stringify(result.requestPayload, null, 2),
+          '',
+          '--- Response Body ---',
+          typeof result.responseBody === 'string'
+            ? result.responseBody
+            : JSON.stringify(result.responseBody, null, 2),
+        ].join('\n'),
+      })
+    })
+  }
+
   function updateMaxSteps(value: number) {
     setMaxSteps((current) => normalizeMaxSteps(value, current))
   }
@@ -484,6 +519,9 @@ function App() {
           actionProtocol={actionProtocol}
           onModelConfigChange={updateConfig}
           onActionProtocolChange={setActionProtocol}
+          onTestConnectivity={() => {
+            void handleTestModelConnectivity()
+          }}
           onMemoryEnabledChange={setMemoryEnabled}
           onScreenBlackoutDuringAutoControlChange={setScreenBlackoutDuringAutoControl}
           onSelectTarget={openConfigTarget}
