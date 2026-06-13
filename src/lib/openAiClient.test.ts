@@ -139,7 +139,6 @@ describe('createOpenAiClient', () => {
     expect(text).toBe('{"action":"tap","x":100,"y":200}')
     const requestBody = JSON.parse(String(vi.mocked(fetcher).mock.calls[0][1]?.body))
     expect(requestBody.stream).toBeUndefined()
-    expect(requestBody.response_format).toEqual({ type: 'json_object' })
     expect(requestBody.messages[1].content[0].text).toContain('Repair only the action output')
     expect(requestBody.messages[1].content[0].text).toContain(
       '{"action":"tap","x":9999,"y":200}',
@@ -164,7 +163,6 @@ describe('createOpenAiClient', () => {
 
     expect(text).toBe('All set.')
     const requestBody = JSON.parse(String(vi.mocked(fetcher).mock.calls[0][1]?.body))
-    expect(requestBody.response_format).toBeUndefined()
     expect(requestBody.stream).toBeUndefined()
     expect(requestBody.messages.at(-1).content).toContain('Write the final answer now.')
   })

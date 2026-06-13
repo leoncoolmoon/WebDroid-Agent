@@ -128,9 +128,6 @@ export function buildChatCompletionPayload({
       ? { reasoning_effort: reasoningEffort }
       : { temperature: 0.1 }),
     max_tokens: 800,
-    ...(actionProtocol === 'webdroid_json'
-      ? { response_format: { type: 'json_object' as const } }
-      : {}),
     ...(stream ? { stream: true } : {}),
     messages,
   }

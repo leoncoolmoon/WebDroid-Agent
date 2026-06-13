@@ -18,7 +18,6 @@ describe('buildChatCompletionPayload', () => {
     expect(payload).toMatchObject({
       model: 'agent-model',
       temperature: 0.1,
-      response_format: { type: 'json_object' },
     })
     expect(payload.messages[1].content).toEqual([
       {
@@ -102,7 +101,6 @@ describe('buildChatCompletionPayload', () => {
       screen: { width: 1080, height: 2400 },
     })
 
-    expect(payload.response_format).toBeUndefined()
     expect(payload.messages[0].content).toContain('<think>{short reason}</think>')
     expect(payload.messages[0].content).toContain('do(action="Tap"')
     expect(payload.messages[0].content).toContain('type_secret(secret_id=')
@@ -120,7 +118,6 @@ describe('buildChatCompletionPayload', () => {
       screen: { width: 1080, height: 2400 },
     })
 
-    expect(payload.response_format).toBeUndefined()
     expect(payload.messages[0].content).toContain('<function_calls>')
     expect(payload.messages[0].content).toContain('type_secret(secret_id,clear)')
     expect(payload.messages[0].content).toContain('custom_tool(tool,input)')
@@ -601,7 +598,6 @@ describe('buildFinalResponsePayload', () => {
       progressSummary: 'Bluetooth settings is open.',
     })
 
-    expect(payload.response_format).toBeUndefined()
     expect(payload.reasoning_effort).toBe('medium')
     expect(payload.messages[0].content).toContain('final user-facing answer')
     expect(payload.messages.at(-1)).toEqual({
