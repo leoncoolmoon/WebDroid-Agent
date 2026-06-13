@@ -121,7 +121,7 @@ export type ChatMessage =
 
 export type ChatCompletionPayload = {
   model: string
-  temperature: number
+  temperature?: number
   max_tokens: number
   reasoning_effort?: ReasoningEffort
   stream?: boolean
@@ -131,8 +131,15 @@ export type ChatCompletionPayload = {
   messages: ChatMessage[]
 }
 
+export type ConnectivityTestResult = {
+  requestPayload: unknown
+  responseStatus: number
+  responseBody: unknown
+}
+
 export type OpenAiClient = {
   completeAction(request: CompletionRequest): Promise<string>
   completeFinalResponse?(request: FinalResponseRequest): Promise<string>
   repairAction?(request: RepairActionRequest): Promise<string>
+  testConnectivity?(request: ModelConfig & { prompt: string; signal?: AbortSignal }): Promise<ConnectivityTestResult>
 }

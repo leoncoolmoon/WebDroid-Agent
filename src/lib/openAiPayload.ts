@@ -120,14 +120,17 @@ export function buildChatCompletionPayload({
     messages.push(multimodalUserMessage(context, screenshotDataUrl, recalledScreenshots))
   }
 
+  const isReasoningModel = reasoningEffort && reasoningEffort !== 'none'
+
   const payload: ChatCompletionPayload = {
     model,
-    temperature: 0.1,
+    ...(isReasoningModel
+      ? { reasoning_effort: reasoningEffort }
+      : { temperature: 0.1 }),
     max_tokens: 800,
     ...(actionProtocol === 'webdroid_json'
       ? { response_format: { type: 'json_object' as const } }
       : {}),
-    ...(reasoningEffort ? { reasoning_effort: reasoningEffort } : {}),
     ...(stream ? { stream: true } : {}),
     messages,
   }
@@ -229,11 +232,14 @@ export function buildFinalResponsePayload({
     }),
   })
 
+  const isReasoningModel = reasoningEffort && reasoningEffort !== 'none'
+
   return {
     model,
-    temperature: 0.2,
+    ...(isReasoningModel
+      ? { reasoning_effort: reasoningEffort }
+      : { temperature: 0.2 }),
     max_tokens: 700,
-    ...(reasoningEffort ? { reasoning_effort: reasoningEffort } : {}),
     ...(stream ? { stream: true } : {}),
     messages,
   }

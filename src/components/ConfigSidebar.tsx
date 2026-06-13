@@ -37,6 +37,7 @@ export type ConfigSidebarProps = {
   onScreenBlackoutDuringAutoControlChange: (value: boolean) => void
   onSelectTarget: (target: ConfigTarget) => void
   onStreamResponsesChange: (value: boolean) => void
+  onTestConnectivity: () => void
   onToggleOpen: () => void
   screenBlackoutDuringAutoControl: boolean
   streamResponses: boolean
@@ -57,6 +58,7 @@ export function ConfigSidebar({
   onScreenBlackoutDuringAutoControlChange,
   onSelectTarget,
   onStreamResponsesChange,
+  onTestConnectivity,
   onToggleOpen,
   screenBlackoutDuringAutoControl,
   streamResponses,
@@ -103,6 +105,7 @@ export function ConfigSidebar({
               onActionProtocolChange={onActionProtocolChange}
               onModelConfigChange={onModelConfigChange}
               onStreamResponsesChange={onStreamResponsesChange}
+              onTestConnectivity={onTestConnectivity}
               streamResponses={streamResponses}
             />
           </section>

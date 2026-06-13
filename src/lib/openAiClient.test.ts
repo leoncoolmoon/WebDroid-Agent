@@ -16,6 +16,15 @@ describe('normalizeBaseUrl', () => {
   it('removes trailing slashes', () => {
     expect(normalizeBaseUrl('https://api.example.com/v1///')).toBe('https://api.example.com/v1')
   })
+
+  it('removes trailing /chat/completions', () => {
+    expect(normalizeBaseUrl('https://api.example.com/v1/chat/completions')).toBe(
+      'https://api.example.com/v1',
+    )
+    expect(normalizeBaseUrl('https://api.example.com/v1/chat/completions/')).toBe(
+      'https://api.example.com/v1',
+    )
+  })
 })
 
 describe('createOpenAiClient', () => {

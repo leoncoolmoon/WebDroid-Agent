@@ -7,6 +7,7 @@ export type BusyTaskId =
   | 'execute-action'
   | 'run-agent'
   | 'run-doctor'
+  | 'test-model-connectivity'
 
 export type BusyTask = {
   id: BusyTaskId
