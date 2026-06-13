@@ -121,7 +121,7 @@ export type ChatMessage =
 
 export type ChatCompletionPayload = {
   model: string
-  temperature: number
+  temperature?: number
   max_tokens: number
   reasoning_effort?: ReasoningEffort
   stream?: boolean

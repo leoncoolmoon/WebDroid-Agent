@@ -295,7 +295,7 @@ function App() {
       return
     }
 
-    await runTask(copy.testModelConnectivityTask, async () => {
+    await runTask('test-model-connectivity', copy.testModelConnectivityTask, async () => {
       if (!client.testConnectivity) {
         throw new Error('Model client does not support connectivity testing.')
       }
