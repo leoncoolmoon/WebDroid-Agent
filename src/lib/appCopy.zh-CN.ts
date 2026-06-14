@@ -173,8 +173,6 @@ export const ZH_CN_COPY = {
   fetchingModels: '正在获取...',
   fetchModelsError: '获取模型列表失败',
   noModelsFound: '未找到模型',
-  manualModelEntry: '手动输入模型',
-  selectModelFromList: '从列表选择模型',
   reasoningEffort: '思考深度',
   reasoningEffortDefault: '服务默认',
   reasoningEffortNone: '无',
