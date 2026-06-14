@@ -203,9 +203,18 @@ export type ConnectivityTestResult = {
   responseBody: unknown
 }
 
+export type ModelListItem = {
+  id: string
+}
+
+export type ModelListResponse = {
+  data: ModelListItem[]
+}
+
 export type OpenAiClient = {
   completeAction(request: CompletionRequest): Promise<string>
   completeFinalResponse?(request: FinalResponseRequest): Promise<string>
   repairAction?(request: RepairActionRequest): Promise<string>
   testConnectivity?(request: ModelConfig & { prompt: string; signal?: AbortSignal }): Promise<ConnectivityTestResult>
+  listModels?(request: Pick<ModelConfig, 'baseUrl' | 'apiKey'> & { signal?: AbortSignal }): Promise<string[]>
 }

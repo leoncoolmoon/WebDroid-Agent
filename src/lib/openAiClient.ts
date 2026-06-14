@@ -25,6 +25,7 @@ export {
   type CompletionRequest,
   type FinalResponseRequest,
   type ModelConfig,
+  type ModelListResponse,
   type OpenAiClient,
   type RepairActionRequest,
   type UserContent,
@@ -112,6 +113,34 @@ export function createOpenAiClient(
   return {
     completeAction,
     completeFinalResponse,
+    async listModels(request) {
+      const proxyUrl = options.proxyUrl?.trim()
+      const url = proxyUrl || `${normalizeBaseUrl(request.baseUrl)}/models`
+
+      const response = await fetcher(url, {
+        method: 'GET',
+        headers: proxyUrl
+          ? { 'Content-Type': 'application/json' }
+          : {
+              Authorization: `Bearer ${request.apiKey}`,
+              'Content-Type': 'application/json',
+            },
+        signal: request.signal,
+      })
+
+      const body = await (response.ok ? readJsonOrUndefined(response) : readErrorBody(response))
+
+      if (!response.ok) {
+        throw new OpenAiClientError(formatApiError(response.status, body))
+      }
+
+      const data = (body as ModelListResponse)?.data
+      if (!Array.isArray(data)) {
+        return []
+      }
+
+      return data.map((item) => item.id).sort()
+    },
     async testConnectivity(request) {
       const payload: ChatCompletionPayload = {
         model: request.model,

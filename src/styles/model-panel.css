@@ -93,3 +93,31 @@
 .api-key-visibility-button svg {
   flex: 0 0 auto;
 }
+
+.model-name-setting {
+  color: var(--text-secondary);
+  display: grid;
+  font-size: 13px;
+  font-weight: 700;
+  gap: 7px;
+}
+
+.model-name-field {
+  align-items: stretch;
+  display: grid;
+  gap: 6px;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.fetch-models-button {
+  min-height: 40px;
+  padding: 0 10px;
+  font-size: 12px;
+}
+
+.setting-error-hint {
+  color: #ff4444;
+  font-size: 11px;
+  font-weight: 400;
+  margin-top: -4px;
+}
