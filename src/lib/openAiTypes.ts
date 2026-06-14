@@ -76,18 +76,48 @@ export type ProviderDefault = {
 }
 
 export const PROVIDER_DEFAULTS: Record<ModelProvider, ProviderDefault> = {
-  openai: { baseUrl: 'https://api.openai.com/v1', responseFormat: 'json_object' },
-  groq: { baseUrl: 'https://api.groq.com/openai/v1', responseFormat: 'json_object' },
-  together: { baseUrl: 'https://api.together.xyz/v1', responseFormat: 'json_object' },
-  openrouter: { baseUrl: 'https://openrouter.ai/api/v1', responseFormat: 'json_object' },
-  deepseek: { baseUrl: 'https://api.deepseek.com', responseFormat: 'json_object' },
-  siliconflow: { baseUrl: 'https://api.siliconflow.cn/v1', responseFormat: 'json_object' },
-  glm: { baseUrl: 'https://open.bigmodel.cn/api/paas/v4', responseFormat: 'json_object' },
-  mistral: { baseUrl: 'https://api.mistral.ai/v1', responseFormat: 'json_object' },
-  nvidia: { baseUrl: 'https://integrate.api.nvidia.com/v1', responseFormat: 'json_object' },
+  openai: {
+    baseUrl: 'https://api.openai.com/v1',
+    responseFormat: 'json_object',
+  },
+  groq: {
+    baseUrl: 'https://api.groq.com/openai/v1',
+    responseFormat: 'json_object',
+  },
+  together: {
+    baseUrl: 'https://api.together.xyz/v1',
+    responseFormat: 'json_object',
+  },
+  openrouter: {
+    baseUrl: 'https://openrouter.ai/api/v1',
+    responseFormat: 'json_object',
+  },
+  deepseek: {
+    baseUrl: 'https://api.deepseek.com',
+    responseFormat: 'json_object',
+  },
+  siliconflow: {
+    baseUrl: 'https://api.siliconflow.cn/v1',
+    responseFormat: 'json_object',
+  },
+  glm: {
+    baseUrl: 'https://open.bigmodel.cn/api/paas/v4',
+    responseFormat: 'json_object',
+  },
+  mistral: {
+    baseUrl: 'https://api.mistral.ai/v1',
+    responseFormat: 'json_object',
+  },
+  nvidia: {
+    baseUrl: 'https://integrate.api.nvidia.com/v1',
+    responseFormat: 'json_object',
+  },
   litellm: { baseUrl: '', responseFormat: 'json_object' },
   lmstudio: { baseUrl: 'http://localhost:1234/v1', responseFormat: 'json_schema' },
-  ollama: { baseUrl: 'http://localhost:11434/v1', responseFormat: 'ollama_json' },
+  ollama: {
+    baseUrl: 'http://localhost:11434/v1',
+    responseFormat: 'ollama_json',
+  },
   llamacpp: { baseUrl: 'http://localhost:8080/v1', responseFormat: 'json_schema' },
   jan: { baseUrl: 'http://localhost:1337/v1', responseFormat: 'json_object' },
   anthropic: { baseUrl: '', responseFormat: 'none' },

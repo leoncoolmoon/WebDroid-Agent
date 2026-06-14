@@ -43,7 +43,7 @@ export function createOpenAiProxyHandler(fetcher = fetch, options = {}) {
       return
     }
 
-    const upstreamUrl = `${normalizeBaseUrl(body.baseUrl)}/chat/completions`
+    const upstreamUrl = `${normalizeBaseUrl(body.baseUrl)}${body.path || '/chat/completions'}`
     const abortController = new AbortController()
     const abortUpstream = () => {
       if (!abortController.signal.aborted) {
@@ -56,13 +56,13 @@ export function createOpenAiProxyHandler(fetcher = fetch, options = {}) {
     let upstreamResponse
     try {
       upstreamResponse = await fetcher(upstreamUrl, {
-        method: 'POST',
+        method: body.method || 'POST',
         headers: {
           Authorization: `Bearer ${body.apiKey}`,
           'Content-Type': 'application/json',
         },
         signal: abortController.signal,
-        body: JSON.stringify(body.payload),
+        body: body.payload ? JSON.stringify(body.payload) : undefined,
       })
     } catch (caught) {
       request.off('aborted', abortUpstream)
@@ -101,8 +101,13 @@ function validateProxyRequest(body) {
   if (typeof body.apiKey !== 'string' || !body.apiKey.trim()) {
     return 'API key is required.'
   }
-  if (!isRecord(body.payload)) {
+  if (body.payload !== undefined && !isRecord(body.payload)) {
     return 'Request payload must be an object.'
+  }
+  if (!body.path || body.path === '/chat/completions') {
+    if (!isRecord(body.payload)) {
+      return 'Request payload must be an object.'
+    }
   }
   return null
 }
