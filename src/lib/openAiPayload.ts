@@ -44,6 +44,7 @@ export function buildChatCompletionPayload({
   memoryItems,
   actionTools,
   stream,
+  responseFormat,
 }: Pick<
   CompletionRequest,
   | 'model'
@@ -69,6 +70,7 @@ export function buildChatCompletionPayload({
   | 'memoryItems'
   | 'actionTools'
   | 'stream'
+  | 'responseFormat'
 >): ChatCompletionPayload {
   const messages: ChatMessage[] = [
     {
@@ -130,6 +132,23 @@ export function buildChatCompletionPayload({
     max_tokens: 800,
     ...(stream ? { stream: true } : {}),
     messages,
+  }
+
+  if (actionProtocol === 'webdroid_json' && responseFormat && responseFormat !== 'none') {
+    if (responseFormat === 'json_object') {
+      payload.response_format = { type: 'json_object' }
+    } else if (responseFormat === 'json_schema') {
+      payload.response_format = {
+        type: 'json_schema',
+        json_schema: {
+          name: 'webdroid_action',
+          strict: false,
+          schema: { type: 'object' },
+        },
+      }
+    } else if (responseFormat === 'ollama_json') {
+      payload.format = 'json'
+    }
   }
 
   return payload

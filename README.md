@@ -138,7 +138,7 @@ npm run preview
 
 - `Base URL`：OpenAI 兼容接口地址，默认 `https://api.openai.com/v1`。
 - `API Key`：模型接口密钥。
-- `Model`：模型名称，默认 `gpt-5.5`。
+- `Model`：模型名称，默认 `gpt-4o`。
 - `Thinking depth`：GPT-5.5 等推理模型的 `reasoning_effort`，可使用服务默认值，或选择 `none`、`minimal`、`low`、`medium`、`high`、`xhigh`。
 - `Action protocol`：模型动作协议，可选 `webdroid_json`、`open_autoglm_function`、`mobilerun_xml`。
 - `Max steps`：自动执行的最大步数，默认 `50`。

@@ -2,13 +2,19 @@ import { useId, useState } from 'react'
 import { Bot, Eye, EyeOff } from 'lucide-react'
 import type { AppCopy } from '../lib/appCopy'
 import type { ActionProtocol } from '../lib/actionProtocol'
-import type { ModelConfig } from '../lib/openAiTypes'
+import {
+  MODEL_PROVIDER_VALUES,
+  PROVIDER_DEFAULTS,
+  type ModelConfig,
+  type ModelProvider,
+} from '../lib/openAiTypes'
 
 export type ModelPanelProps = {
   actionProtocol: ActionProtocol
   copy: AppCopy
   modelConfig: ModelConfig
   onActionProtocolChange: (value: ActionProtocol) => void
+  onFetchModels?: () => Promise<string[]>
   onModelConfigChange: <Key extends keyof ModelConfig>(key: Key, value: ModelConfig[Key]) => void
   onStreamResponsesChange: (value: boolean) => void
   onTestConnectivity: () => void
@@ -20,12 +26,17 @@ export function ModelPanel({
   copy,
   modelConfig,
   onActionProtocolChange,
+  onFetchModels,
   onModelConfigChange,
   onStreamResponsesChange,
   onTestConnectivity,
   streamResponses,
 }: ModelPanelProps) {
   const apiKeyInputId = useId()
+  const modelDatalistId = useId()
+  const [fetchedModels, setFetchedModels] = useState<string[]>([])
+  const [isFetchingModels, setIsFetchingModels] = useState(false)
+  const [fetchError, setFetchError] = useState(false)
   const [apiKeyVisible, setApiKeyVisible] = useState(false)
   const apiKeyVisibilityLabel = apiKeyVisible ? copy.hideApiKey : copy.showApiKey
 
@@ -49,6 +60,28 @@ export function ModelPanel({
         </div>
         <details className="model-details">
           <summary>{copy.modelSettings}</summary>
+          <label>
+            {copy.provider}
+            <select
+              value={modelConfig.provider ?? 'custom'}
+              onChange={(event) => {
+                const provider = event.target.value as ModelProvider
+                onModelConfigChange('provider', provider)
+                const defaults = PROVIDER_DEFAULTS[provider]
+                if (defaults) {
+                  onModelConfigChange('baseUrl', defaults.baseUrl)
+                  onModelConfigChange('responseFormat', defaults.responseFormat)
+                }
+              }}
+            >
+              {MODEL_PROVIDER_VALUES.map((provider) => (
+                <option key={provider} value={provider}>
+                  {copy.modelProviderNames[provider as keyof typeof copy.modelProviderNames] ||
+                    provider}
+                </option>
+              ))}
+            </select>
+          </label>
           <label>
             {copy.baseUrl}
             <input
@@ -78,14 +111,53 @@ export function ModelPanel({
               </button>
             </div>
           </div>
-          <label>
-            {copy.model}
-            <input
-              value={modelConfig.model}
-              onChange={(event) => onModelConfigChange('model', event.target.value)}
-              placeholder="vision-model"
-            />
-          </label>
+          <div className="model-name-setting">
+            <label htmlFor={modelDatalistId}>{copy.model}</label>
+            <div className="model-name-field">
+              <input
+                id={modelDatalistId}
+                value={modelConfig.model}
+                onChange={(event) => onModelConfigChange('model', event.target.value)}
+                placeholder="vision-model"
+                list={`${modelDatalistId}-list`}
+                autoComplete="off"
+              />
+              <datalist id={`${modelDatalistId}-list`}>
+                {fetchedModels.map((m) => (
+                  <option key={m} value={m} />
+                ))}
+              </datalist>
+              {onFetchModels ? (
+                <button
+                  type="button"
+                  className="secondary-button fetch-models-button"
+                  disabled={isFetchingModels || !modelConfig.baseUrl || !modelConfig.apiKey}
+                  onClick={async () => {
+                    setIsFetchingModels(true)
+                    setFetchError(false)
+                    try {
+                      const models = await onFetchModels()
+                      setFetchedModels(models)
+                      if (models.length === 0) {
+                        setFetchError(true)
+                      }
+                    } catch (e) {
+                      console.error(e)
+                      setFetchError(true)
+                    } finally {
+                      setIsFetchingModels(false)
+                    }
+                  }}
+                  title={fetchError ? copy.fetchModelsError : copy.fetchModels}
+                >
+                  {isFetchingModels ? copy.fetchingModels : copy.fetchModels}
+                </button>
+              ) : null}
+            </div>
+            {fetchError && fetchedModels.length === 0 && (
+              <span className="setting-error-hint">{copy.noModelsFound}</span>
+            )}
+          </div>
           <label>
             {copy.reasoningEffort}
             <select
@@ -119,6 +191,23 @@ export function ModelPanel({
                 {copy.actionProtocolOpenAutoGlm}
               </option>
               <option value="mobilerun_xml">{copy.actionProtocolMobilerunXml}</option>
+            </select>
+          </label>
+          <label>
+            {copy.jsonResponseFormat}
+            <select
+              value={modelConfig.responseFormat ?? 'none'}
+              onChange={(event) =>
+                onModelConfigChange(
+                  'responseFormat',
+                  event.target.value as ModelConfig['responseFormat'],
+                )
+              }
+            >
+              <option value="none">{copy.responseFormatNone}</option>
+              <option value="json_object">{copy.responseFormatJsonObject}</option>
+              <option value="json_schema">{copy.responseFormatJsonSchema}</option>
+              <option value="ollama_json">{copy.responseFormatOllamaJson}</option>
             </select>
           </label>
           <label className="toggle">

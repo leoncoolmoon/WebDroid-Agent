@@ -290,6 +290,17 @@ function App() {
     })
   }
 
+  async function handleFetchModels() {
+    if (!client.listModels) {
+      throw new Error('Model client does not support fetching model list.')
+    }
+
+    return client.listModels({
+      baseUrl: modelConfig.baseUrl,
+      apiKey: modelConfig.apiKey,
+    })
+  }
+
   async function handleTestModelConnectivity() {
     if (busyTask) {
       return
@@ -519,6 +530,7 @@ function App() {
           actionProtocol={actionProtocol}
           onModelConfigChange={updateConfig}
           onActionProtocolChange={setActionProtocol}
+          onFetchModels={handleFetchModels}
           onTestConnectivity={() => {
             void handleTestModelConnectivity()
           }}

@@ -107,7 +107,11 @@ export function buildSystemPrompt({
 
   return [
     'You are a phone-control agent for an Android device.',
-    'Inspect the screenshot and choose exactly one next action.',
+    [
+      'Prioritize logical interactions using the provided `screenTree` (UI hierarchy) over purely visual screenshot analysis.',
+      'Prefer direct logical actions such as "launch" (using package names), "open_url", and "key" over visually searching for and tapping icons.',
+      'Use the screenshot primarily for verification or as a fallback when the UI tree is missing, incomplete, or when navigating complex visual content.',
+    ].join(' '),
     'A sequence or repeat action still counts as one next action object.',
     ...protocolInstructions,
     [

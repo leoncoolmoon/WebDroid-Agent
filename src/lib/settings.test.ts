@@ -18,8 +18,8 @@ function memoryStorage(initial: Record<string, string> = {}): SettingsStorage {
 }
 
 describe('settings persistence', () => {
-  it('uses gpt-5.5 as the default model', () => {
-    expect(DEFAULT_SETTINGS.modelConfig.model).toBe('gpt-5.5')
+  it('uses gpt-4o as the default model', () => {
+    expect(DEFAULT_SETTINGS.modelConfig.model).toBe('gpt-4o')
   })
 
   it('loads defaults when no persisted settings exist', () => {
@@ -30,10 +30,12 @@ describe('settings persistence', () => {
     const persisted: AppSettings = {
       actionProtocol: 'mobilerun_xml',
       modelConfig: {
+        provider: 'openai',
         baseUrl: 'https://api.example.com/v1',
         apiKey: 'sk-test',
         model: 'custom-model',
         reasoningEffort: 'high',
+        responseFormat: 'json_object',
       },
       maxSteps: 12,
       memoryEnabled: true,
@@ -68,9 +70,11 @@ describe('settings persistence', () => {
         }),
       ).modelConfig,
     ).toEqual({
+      provider: 'openai',
       baseUrl: 'https://old.example.com/v1',
       apiKey: '',
       model: 'old-model',
+      responseFormat: 'json_object',
     })
   })
 
@@ -79,10 +83,12 @@ describe('settings persistence', () => {
     const settings: AppSettings = {
       ...DEFAULT_SETTINGS,
       modelConfig: {
+        provider: 'openai',
         baseUrl: 'https://api.example.com/v1',
         apiKey: 'sk-test',
-        model: 'gpt-5.5',
+        model: 'gpt-4o',
         reasoningEffort: 'medium',
+        responseFormat: 'json_object',
       },
     }
 
