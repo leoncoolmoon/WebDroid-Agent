@@ -481,7 +481,7 @@ describe('App', () => {
   it('collapses model settings behind the current model name', () => {
     render(<App />)
 
-    expect(screen.getByDisplayValue('gpt-4o')).toBeTruthy()
+    expect(screen.getByText('gpt-4o')).toBeTruthy()
     const detailsToggle = screen.getByText('Model settings')
     const details = detailsToggle.closest('details')
 

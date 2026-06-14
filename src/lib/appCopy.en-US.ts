@@ -175,8 +175,6 @@ export const EN_US_COPY = {
   fetchingModels: 'Fetching...',
   fetchModelsError: 'Could not fetch models',
   noModelsFound: 'No models found',
-  manualModelEntry: 'Manual entry',
-  selectModelFromList: 'Select from list',
   reasoningEffort: 'Thinking depth',
   reasoningEffortDefault: 'Provider default',
   reasoningEffortNone: 'None',

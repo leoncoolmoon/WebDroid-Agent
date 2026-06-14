@@ -119,7 +119,7 @@ export function createOpenAiClient(
       const url = proxyUrl || `${normalizeBaseUrl(request.baseUrl)}/models`
 
       const response = await fetcher(url, {
-        method: proxyUrl ? 'POST' : 'GET',
+        method: 'GET',
         headers: proxyUrl
           ? { 'Content-Type': 'application/json' }
           : {
@@ -127,14 +127,6 @@ export function createOpenAiClient(
               'Content-Type': 'application/json',
             },
         signal: request.signal,
-        body: proxyUrl
-          ? JSON.stringify({
-              baseUrl: request.baseUrl,
-              apiKey: request.apiKey,
-              method: 'GET',
-              path: '/models',
-            })
-          : undefined,
       })
 
       const body = await (response.ok ? readJsonOrUndefined(response) : readErrorBody(response))
