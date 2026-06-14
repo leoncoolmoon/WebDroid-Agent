@@ -1,4 +1,4 @@
-import type { DeviceScreenshot } from '../../adapters/deviceTypes'
+import type { DeviceScreenshot, DeviceScreenTree } from '../../adapters/deviceTypes'
 import type { AgentAction, ExecutableAtomicAction, ScreenSize } from '../actionTypes'
 
 export const MODEL_SCREENSHOT_MAX_SIDE = 1536
@@ -135,5 +135,37 @@ function mapPoint(x: number, y: number, fromScreen: ScreenSize, toScreen: Screen
   return {
     x: Math.round((x / fromScreen.width) * toScreen.width),
     y: Math.round((y / fromScreen.height) * toScreen.height),
+  }
+}
+
+export function mapScreenTreeCoordinates(
+  tree: DeviceScreenTree,
+  fromScreen: ScreenSize,
+  toScreen: ScreenSize,
+): DeviceScreenTree {
+  if (fromScreen.width === toScreen.width && fromScreen.height === toScreen.height) {
+    return tree
+  }
+
+  return {
+    ...tree,
+    nodes: tree.nodes.map((node) => {
+      if (!node.bounds) {
+        return node
+      }
+
+      const topLeft = mapPoint(node.bounds.left, node.bounds.top, fromScreen, toScreen)
+      const bottomRight = mapPoint(node.bounds.right, node.bounds.bottom, fromScreen, toScreen)
+
+      return {
+        ...node,
+        bounds: {
+          left: topLeft.x,
+          top: topLeft.y,
+          right: bottomRight.x,
+          bottom: bottomRight.y,
+        },
+      }
+    }),
   }
 }

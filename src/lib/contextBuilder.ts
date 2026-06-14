@@ -22,7 +22,7 @@ import {
   formatInstalledAppsForPrompt,
   formatPromptHistoryItem,
 } from './promptContextFormatting'
-import { modelScreenshotView } from './screenshot'
+import { mapScreenTreeCoordinates, modelScreenshotView } from './screenshot'
 
 const COMPACTED_TURN_EXECUTION_RESULT_MAX_LENGTH = 4000
 const CONTEXT_SUMMARY_MAX_LENGTH = 16000
@@ -92,6 +92,11 @@ export function buildAgentPromptContext({
     : (fallbackHistory ?? []).slice(-maxRecentTurns)
   const screenInfo = buildPromptScreenInfo({ currentApp, deviceScreen, deviceState, screen })
 
+  const modelScreenTree =
+    screenTree && deviceScreen
+      ? mapScreenTreeCoordinates(screenTree, deviceScreen, screen)
+      : screenTree
+
   const lines = [
     `Task: ${truncatePromptContextText(task, TASK_CONTEXT_MAX_LENGTH)}`,
     latestUserMessage
@@ -119,7 +124,7 @@ export function buildAgentPromptContext({
     thread?.contextSummary ? `<context_summary>\n${thread.contextSummary}\n</context_summary>` : null,
     thread ? formatRecentActionErrors(thread) : null,
     `Screen Info: ${screenInfo}`,
-    formatScreenTreeForPrompt(screenTree),
+    formatScreenTreeForPrompt(modelScreenTree),
     appCard
       ? `<app_card>\n${truncatePromptContextText(appCard, APP_CARD_PROMPT_MAX_LENGTH)}\n</app_card>`
       : null,
