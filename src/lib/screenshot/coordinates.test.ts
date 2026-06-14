@@ -4,6 +4,7 @@ import {
   chooseGridDivisions,
   fitDimensionsToMaxSide,
   mapActionCoordinates,
+  mapScreenTreeCoordinates,
   modelScreenshotView,
 } from './coordinates'
 
@@ -118,6 +119,34 @@ describe('mapActionCoordinates', () => {
         deviceScreen,
       ),
     ).toEqual({ action: 'input_text', text: 'hello', clear: true })
+  })
+})
+
+describe('mapScreenTreeCoordinates', () => {
+  const deviceScreen = { width: 1000, height: 2000 }
+  const modelScreen = { width: 500, height: 1000 }
+  const tree = {
+    nodes: [
+      {
+        index: 0,
+        text: 'Button',
+        bounds: { left: 100, top: 200, right: 300, bottom: 400 },
+      },
+      {
+        index: 1,
+        text: 'No Bounds',
+      },
+    ],
+  }
+
+  it('scales node bounds to the target resolution', () => {
+    const mapped = mapScreenTreeCoordinates(tree, deviceScreen, modelScreen)
+    expect(mapped.nodes[0].bounds).toEqual({ left: 50, top: 100, right: 150, bottom: 200 })
+    expect(mapped.nodes[1].bounds).toBeUndefined()
+  })
+
+  it('returns the same tree if dimensions match', () => {
+    expect(mapScreenTreeCoordinates(tree, deviceScreen, deviceScreen)).toBe(tree)
   })
 })
 
