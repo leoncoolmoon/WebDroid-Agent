@@ -1,5 +1,5 @@
 import { useId, useState } from 'react'
-import { Bot, Eye, EyeOff } from 'lucide-react'
+import { Bot, Eye, EyeOff, List } from 'lucide-react'
 import type { AppCopy } from '../lib/appCopy'
 import type { ActionProtocol } from '../lib/actionProtocol'
 import {
@@ -33,12 +33,21 @@ export function ModelPanel({
   streamResponses,
 }: ModelPanelProps) {
   const apiKeyInputId = useId()
-  const modelDatalistId = useId()
   const [fetchedModels, setFetchedModels] = useState<string[]>([])
   const [isFetchingModels, setIsFetchingModels] = useState(false)
   const [fetchError, setFetchError] = useState(false)
   const [apiKeyVisible, setApiKeyVisible] = useState(false)
+  const [isManualModel, setIsManualModel] = useState(false)
   const apiKeyVisibilityLabel = apiKeyVisible ? copy.hideApiKey : copy.showApiKey
+
+  const allSuggestedModels = Array.from(new Set(fetchedModels))
+
+  const showManualInput =
+    isManualModel ||
+    (allSuggestedModels.length === 0 && modelConfig.model !== '') ||
+    (allSuggestedModels.length > 0 &&
+      !allSuggestedModels.includes(modelConfig.model) &&
+      modelConfig.model !== '')
 
   return (
     <>
@@ -47,17 +56,99 @@ export function ModelPanel({
         <h2>{copy.model}</h2>
       </div>
       <div className="model-box">
-        <div className="model-box-header">
-          <span>{modelConfig.model || copy.noModel}</span>
-          <button
-            type="button"
-            className="secondary-button test-connectivity-button"
-            onClick={onTestConnectivity}
-            disabled={!modelConfig.baseUrl || !modelConfig.apiKey || !modelConfig.model}
-          >
-            {copy.testModel}
-          </button>
+        <div className="model-box-main">
+          <div className="model-name-setting">
+            <div className="model-name-field">
+              {showManualInput ? (
+                <input
+                  aria-label={copy.model}
+                  value={modelConfig.model}
+                  onChange={(event) => onModelConfigChange('model', event.target.value)}
+                  placeholder="vision-model"
+                  autoComplete="off"
+                />
+              ) : (
+                <select
+                  aria-label={copy.model}
+                  value={modelConfig.model}
+                  onChange={(event) => {
+                    if (event.target.value === '__manual__') {
+                      setIsManualModel(true)
+                    } else {
+                      onModelConfigChange('model', event.target.value)
+                    }
+                  }}
+                >
+                  <option value="" disabled>
+                    {copy.noModel}
+                  </option>
+                  {allSuggestedModels.map((m) => (
+                    <option key={m} value={m}>
+                      {m}
+                    </option>
+                  ))}
+                  <option value="__manual__">{copy.manualModelEntry}...</option>
+                </select>
+              )}
+              {showManualInput && (
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={() => {
+                    setIsManualModel(false)
+                    if (!allSuggestedModels.includes(modelConfig.model)) {
+                      onModelConfigChange('model', '')
+                    }
+                  }}
+                  title={copy.selectModelFromList}
+                >
+                  <List size={16} />
+                </button>
+              )}
+              {onFetchModels ? (
+                <button
+                  type="button"
+                  className="secondary-button fetch-models-button"
+                  disabled={isFetchingModels || !modelConfig.baseUrl || !modelConfig.apiKey}
+                  onClick={async () => {
+                    setIsFetchingModels(true)
+                    setFetchError(false)
+                    try {
+                      const models = await onFetchModels()
+                      setFetchedModels(models)
+                      if (models.length === 0) {
+                        setFetchError(true)
+                      }
+                    } catch (e) {
+                      console.error(e)
+                      setFetchError(true)
+                    } finally {
+                      setIsFetchingModels(false)
+                    }
+                  }}
+                  title={fetchError ? copy.fetchModelsError : copy.fetchModels}
+                >
+                  {isFetchingModels ? copy.fetchingModels : copy.fetchModels}
+                </button>
+              ) : null}
+            </div>
+          </div>
+          <div className="model-box-actions">
+            <button
+              type="button"
+              className="secondary-button test-connectivity-button"
+              onClick={onTestConnectivity}
+              disabled={!modelConfig.baseUrl || !modelConfig.apiKey || !modelConfig.model}
+            >
+              {copy.testModel}
+            </button>
+          </div>
         </div>
+
+        {fetchError && fetchedModels.length === 0 && (
+          <span className="setting-error-hint">{copy.noModelsFound}</span>
+        )}
+
         <details className="model-details">
           <summary>{copy.modelSettings}</summary>
           <label>
@@ -110,53 +201,6 @@ export function ModelPanel({
                 {apiKeyVisible ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             </div>
-          </div>
-          <div className="model-name-setting">
-            <label htmlFor={modelDatalistId}>{copy.model}</label>
-            <div className="model-name-field">
-              <input
-                id={modelDatalistId}
-                value={modelConfig.model}
-                onChange={(event) => onModelConfigChange('model', event.target.value)}
-                placeholder="vision-model"
-                list={`${modelDatalistId}-list`}
-                autoComplete="off"
-              />
-              <datalist id={`${modelDatalistId}-list`}>
-                {fetchedModels.map((m) => (
-                  <option key={m} value={m} />
-                ))}
-              </datalist>
-              {onFetchModels ? (
-                <button
-                  type="button"
-                  className="secondary-button fetch-models-button"
-                  disabled={isFetchingModels || !modelConfig.baseUrl || !modelConfig.apiKey}
-                  onClick={async () => {
-                    setIsFetchingModels(true)
-                    setFetchError(false)
-                    try {
-                      const models = await onFetchModels()
-                      setFetchedModels(models)
-                      if (models.length === 0) {
-                        setFetchError(true)
-                      }
-                    } catch (e) {
-                      console.error(e)
-                      setFetchError(true)
-                    } finally {
-                      setIsFetchingModels(false)
-                    }
-                  }}
-                  title={fetchError ? copy.fetchModelsError : copy.fetchModels}
-                >
-                  {isFetchingModels ? copy.fetchingModels : copy.fetchModels}
-                </button>
-              ) : null}
-            </div>
-            {fetchError && fetchedModels.length === 0 && (
-              <span className="setting-error-hint">{copy.noModelsFound}</span>
-            )}
           </div>
           <label>
             {copy.reasoningEffort}

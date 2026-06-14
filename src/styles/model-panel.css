@@ -10,21 +10,16 @@
   padding: 12px;
 }
 
-.model-box-header {
+.model-box-main {
   align-items: flex-start;
   display: flex;
   gap: 12px;
   justify-content: space-between;
 }
 
-.model-box-header > span {
-  color: var(--text);
-  flex: 1;
-  font-size: 15px;
-  font-weight: 800;
-  line-height: 1.25;
-  overflow-wrap: anywhere;
-  padding-top: 2px;
+.model-box-actions {
+  display: flex;
+  gap: 8px;
 }
 
 .test-connectivity-button {
@@ -97,9 +92,11 @@
 .model-name-setting {
   color: var(--text-secondary);
   display: grid;
+  flex: 1;
   font-size: 13px;
   font-weight: 700;
   gap: 7px;
+  min-width: 0;
 }
 
 .model-name-field {
