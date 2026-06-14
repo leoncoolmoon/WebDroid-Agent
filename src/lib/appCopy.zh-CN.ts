@@ -237,6 +237,8 @@ export const ZH_CN_COPY = {
   useAdbKeyboard: '文本输入使用 ADB 键盘',
   confirmSensitiveActions: '确认敏感动作',
   unrestrictedMode: '完全无限制模式',
+  debugMode: '调试模式',
+  debugModeHelp: '显示每一步的模型输入和输出，方便排查问题。',
   sensitiveActionTitle: '请求执行敏感动作',
   sensitiveActionPrompt: '是否执行？',
   actionSettle: '动作等待 (ms)',

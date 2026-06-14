@@ -240,6 +240,8 @@ export const EN_US_COPY = {
   useAdbKeyboard: 'Use ADB Keyboard for text',
   confirmSensitiveActions: 'Confirm sensitive actions',
   unrestrictedMode: 'Unrestricted mode',
+  debugMode: 'Debug mode',
+  debugModeHelp: 'Show model input and output for each step to help with troubleshooting.',
   sensitiveActionTitle: 'Sensitive action requested',
   sensitiveActionPrompt: 'Execute it?',
   actionSettle: 'Action settle (ms)',

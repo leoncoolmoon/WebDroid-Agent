@@ -16,6 +16,7 @@ export type ConversationPanelProps = {
   copy: AppCopy
   historySidebarOpen: boolean
   pendingStep: AgentStep | null
+  debugMode?: boolean
   sessionSummary?: AgentSessionSummary
   threadSummaries: AgentThreadSummary[]
   onChatInputChange: (value: string) => void
@@ -47,6 +48,7 @@ export function ConversationPanel({
   onSubmitChatMessage,
   onToggleHistorySidebar,
   pendingStep,
+  debugMode,
   sessionSummary,
   threadSummaries,
 }: ConversationPanelProps) {
@@ -72,6 +74,7 @@ export function ConversationPanel({
         onSubmitChatMessage={onSubmitChatMessage}
         onToggleHistorySidebar={onToggleHistorySidebar}
         pendingStep={pendingStep}
+        debugMode={debugMode}
       />
     </aside>
   )

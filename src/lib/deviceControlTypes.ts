@@ -20,6 +20,7 @@ export type DeviceControlOptions = {
   keyboardStepMs: number
   preferAdbKeyboard: boolean
   unrestrictedMode: boolean
+  debugMode: boolean
 }
 
 export type DeviceControlActions = {
@@ -28,6 +29,7 @@ export type DeviceControlActions = {
   onConfirmSensitiveActionsChange: (value: boolean) => void
   onConfigureAdbKeyboard: () => void
   onConnectDevice: () => void
+  onDebugModeChange: (value: boolean) => void
   onDisconnectDevice: () => void
   onDoubleTapIntervalMsChange: (value: number) => void
   onKeyboardStepMsChange: (value: number) => void

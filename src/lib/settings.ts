@@ -22,6 +22,7 @@ export type AppSettings = {
   preferAdbKeyboard: boolean
   confirmSensitiveActions: boolean
   unrestrictedMode: boolean
+  debugMode: boolean
   screenBlackoutDuringAutoControl: boolean
   streamResponses: boolean
   disabledActionTools: ActionToolName[]
@@ -57,6 +58,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   preferAdbKeyboard: false,
   confirmSensitiveActions: true,
   unrestrictedMode: false,
+  debugMode: false,
   screenBlackoutDuringAutoControl: false,
   streamResponses: false,
   disabledActionTools: [],
@@ -129,6 +131,7 @@ function normalizeSettings(candidate: unknown): AppSettings {
       DEFAULT_SETTINGS.confirmSensitiveActions,
     ),
     unrestrictedMode: readBoolean(candidate.unrestrictedMode, DEFAULT_SETTINGS.unrestrictedMode),
+    debugMode: readBoolean(candidate.debugMode, DEFAULT_SETTINGS.debugMode),
     screenBlackoutDuringAutoControl: readBoolean(
       candidate.screenBlackoutDuringAutoControl,
       DEFAULT_SETTINGS.screenBlackoutDuringAutoControl,

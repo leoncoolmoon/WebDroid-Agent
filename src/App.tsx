@@ -160,6 +160,7 @@ function App() {
     keyboardStepMs,
     preferAdbKeyboard,
     unrestrictedMode,
+    debugMode,
   } = device.options
   const hasModelConfig = Boolean(modelConfig.baseUrl && modelConfig.apiKey && modelConfig.model)
   const currentSettings = useMemo<AppSettings>(
@@ -171,6 +172,7 @@ function App() {
       preferAdbKeyboard,
       confirmSensitiveActions,
       unrestrictedMode,
+      debugMode,
       screenBlackoutDuringAutoControl,
       streamResponses,
       disabledActionTools,
@@ -184,6 +186,7 @@ function App() {
       actionProtocol,
       actionSettleMs,
       confirmSensitiveActions,
+      debugMode,
       disabledActionTools,
       doubleTapIntervalMs,
       keyboardStepMs,
@@ -581,6 +584,7 @@ function App() {
           onSubmitChatMessage={submitChatMessage}
           onToggleHistorySidebar={() => setHistorySidebarOpen((current) => !current)}
           pendingStep={pendingStep}
+          debugMode={debugMode}
           threadSummaries={threadSummaries}
         />
       </section>

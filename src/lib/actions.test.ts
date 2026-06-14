@@ -170,10 +170,17 @@ describe('validateAction', () => {
     })
   })
 
-  it('rejects tap coordinates outside the screen bounds', () => {
-    expect(() => validateAction({ action: 'tap', x: 1080, y: 200 }, screen)).toThrow(
-      'outside the current screen',
-    )
+  it('clamps tap coordinates outside the screen bounds', () => {
+    expect(validateAction({ action: 'tap', x: 1080, y: 200 }, screen)).toEqual({
+      action: 'tap',
+      x: 1079,
+      y: 200,
+    })
+    expect(validateAction({ action: 'tap', x: -10, y: 2400 }, screen)).toEqual({
+      action: 'tap',
+      x: 0,
+      y: 2399,
+    })
   })
 
   it('normalizes wait durations to a safe range', () => {

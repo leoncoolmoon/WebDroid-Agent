@@ -17,11 +17,12 @@ type AgentStepCardProps = {
   copy: AppCopy
   isActive: boolean
   turn: AgentTurn
+  debugMode?: boolean
 }
 
 type StepTone = 'planned' | 'running' | 'success' | 'failed' | 'review' | 'takeover'
 
-export function AgentStepCard({ copy, isActive, turn }: AgentStepCardProps) {
+export function AgentStepCard({ copy, debugMode, isActive, turn }: AgentStepCardProps) {
   const status = formatStepStatus(turn, copy, isActive)
   const packageName = turn.deviceSnapshot.deviceState.packageName
   const result = formatStepResult(turn, copy)
@@ -84,6 +85,12 @@ export function AgentStepCard({ copy, isActive, turn }: AgentStepCardProps) {
           <>
             <span className="agent-step-detail-title">{copy.stepModelOutput}</span>
             <pre>{turn.modelOutput}</pre>
+          </>
+        ) : null}
+        {debugMode && turn.promptContext?.trim() ? (
+          <>
+            <span className="agent-step-detail-title">Prompt Context</span>
+            <pre>{turn.promptContext}</pre>
           </>
         ) : null}
       </LazyDetails>

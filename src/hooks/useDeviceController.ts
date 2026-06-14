@@ -72,6 +72,7 @@ export function useDeviceController({
     initialSettings.confirmSensitiveActions,
   )
   const [unrestrictedMode, setUnrestrictedMode] = useState(initialSettings.unrestrictedMode)
+  const [debugMode, setDebugMode] = useState(initialSettings.debugMode)
   const [actionSettleMs, setActionSettleMs] = useState(initialSettings.actionSettleMs)
   const [doubleTapIntervalMs, setDoubleTapIntervalMs] = useState(
     initialSettings.doubleTapIntervalMs,
@@ -312,6 +313,7 @@ export function useDeviceController({
       onDoubleTapIntervalMsChange: setDoubleTapIntervalMs,
       onKeyboardStepMsChange: setKeyboardStepMs,
       onLaunchInstalledApp: launchInstalledApp,
+      onDebugModeChange: setDebugMode,
       onPreferAdbKeyboardChange: toggleAdbKeyboard,
       onRunDirectAction: runDirectAction,
       onRunDoctor: runDoctor,
@@ -326,6 +328,7 @@ export function useDeviceController({
     options: {
       actionSettleMs,
       confirmSensitiveActions,
+      debugMode,
       doubleTapIntervalMs,
       keyboardStepMs,
       preferAdbKeyboard,

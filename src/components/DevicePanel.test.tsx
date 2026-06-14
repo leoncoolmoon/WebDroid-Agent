@@ -17,6 +17,7 @@ function createDevicePanelProps(
       onConfirmSensitiveActionsChange: vi.fn(),
       onConfigureAdbKeyboard: vi.fn(),
       onConnectDevice: vi.fn(),
+      onDebugModeChange: vi.fn(),
       onDisconnectDevice: vi.fn(),
       onDoubleTapIntervalMsChange: vi.fn(),
       onKeyboardStepMsChange: vi.fn(),
