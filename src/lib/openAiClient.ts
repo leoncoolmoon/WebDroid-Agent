@@ -10,6 +10,7 @@ import type {
   ChatCompletionPayload,
   FinalResponseRequest,
   CompletionRequest,
+  ModelListResponse,
   OpenAiClient,
   RepairActionRequest,
 } from './openAiTypes'
