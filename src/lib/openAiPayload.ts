@@ -45,6 +45,7 @@ export function buildChatCompletionPayload({
   actionTools,
   stream,
   responseFormat,
+  customSystemPrompt,
 }: Pick<
   CompletionRequest,
   | 'model'
@@ -71,11 +72,14 @@ export function buildChatCompletionPayload({
   | 'actionTools'
   | 'stream'
   | 'responseFormat'
+  | 'customSystemPrompt'
 >): ChatCompletionPayload {
   const messages: ChatMessage[] = [
     {
       role: 'system',
-      content: buildSystemPrompt({ actionProtocol, unrestrictedMode, memoryEnabled }),
+      content:
+        customSystemPrompt ??
+        buildSystemPrompt({ actionProtocol, unrestrictedMode, memoryEnabled }),
     },
   ]
 
@@ -214,6 +218,7 @@ export function buildFinalResponsePayload({
   progressSummary,
   reasoningEffort,
   stream,
+  customSystemPrompt,
 }: Pick<
   FinalResponseRequest,
   | 'model'
@@ -225,11 +230,12 @@ export function buildFinalResponsePayload({
   | 'progressSummary'
   | 'reasoningEffort'
   | 'stream'
+  | 'customSystemPrompt'
 >): ChatCompletionPayload {
   const messages: ChatMessage[] = [
     {
       role: 'system',
-      content: buildFinalResponseSystemPrompt(),
+      content: customSystemPrompt ?? buildFinalResponseSystemPrompt(),
     },
   ]
 

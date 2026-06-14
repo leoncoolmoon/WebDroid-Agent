@@ -16,6 +16,7 @@ import type { AppCopy } from '../lib/appCopy'
 import type { ActionProtocol } from '../lib/actionProtocol'
 import type { AppCardMap } from '../lib/appCards'
 import type { CustomToolDefinition, SecretRecord } from '../lib/agentResources'
+import { DEFAULT_PROMPT_GROUP_ID, type PromptGroup } from '../lib/promptGroups'
 import type { BusyTask, BusyTaskId } from '../lib/busyTask'
 import type { OpenAiClient, ModelConfig } from '../lib/openAiTypes'
 import type { LogEntryInput } from '../lib/runLogEntries'
@@ -54,6 +55,8 @@ type UseAgentRunControllerInput = {
   memoryEnabled: boolean
   memoryItems: readonly string[]
   modelConfig: ModelConfig
+  activePromptGroupId: string
+  promptGroups: readonly PromptGroup[]
   onMemoryItem: (information: string) => void
   pendingStep: AgentStep | null
   runTask: RunTask
@@ -85,6 +88,8 @@ export function useAgentRunController({
   memoryEnabled,
   memoryItems,
   modelConfig,
+  activePromptGroupId,
+  promptGroups,
   onMemoryItem,
   pendingStep,
   runTask,
@@ -104,6 +109,11 @@ export function useAgentRunController({
       return
     }
 
+    const activeGroup =
+      activePromptGroupId === DEFAULT_PROMPT_GROUP_ID
+        ? null
+        : promptGroups.find((g) => g.id === activePromptGroupId)
+
     await runTask('execute-action', copy.executeActionTask, async () => {
       if (pendingStep.action.action === 'done') {
         recordAgentStep(ensureSession(), pendingStep, undefined, undefined, {
@@ -115,6 +125,7 @@ export function useAgentRunController({
           modelConfig: { ...modelConfig, stream: streamResponses },
           session: ensureSession(),
           task: ensureSession().task,
+          customSystemPrompt: activeGroup?.systemPrompt,
         })
         addLog({ tone: 'ok', title: copy.taskComplete, detail: finalResponse })
         recordThreadStatus(ensureSession(), 'done', finalResponse)
@@ -196,6 +207,11 @@ export function useAgentRunController({
     const abortController = new AbortController()
     abortRef.current = abortController
 
+    const activeGroup =
+      activePromptGroupId === DEFAULT_PROMPT_GROUP_ID
+        ? null
+        : promptGroups.find((g) => g.id === activePromptGroupId)
+
     await runTask('run-agent', copy.runAgentTask, async () => {
       let screenBlackoutActive = false
       try {
@@ -207,9 +223,14 @@ export function useAgentRunController({
           copy,
           enabled: screenBlackoutDuringAutoControl,
         })
-        const runner = createAgentRunner({ device: backend, client, toolRegistry: actionToolRegistry })
+        const runner = createAgentRunner({
+          device: backend,
+          client,
+          toolRegistry: actionToolRegistry,
+        })
         const result = await runner.run({
           modelConfig: { ...modelConfig, stream: streamResponses },
+          customSystemPrompt: activeGroup?.systemPrompt,
           actionProtocol,
           task: session.task,
           autoExecute: true,
@@ -307,6 +328,8 @@ export function useAgentRunController({
     memoryEnabled,
     memoryItems,
     modelConfig,
+    activePromptGroupId,
+    promptGroups,
     onMemoryItem,
     runTask,
     screenBlackoutDuringAutoControl,

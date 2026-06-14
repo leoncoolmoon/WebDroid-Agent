@@ -7,6 +7,7 @@ import {
 import type { AppCopy } from '../lib/appCopy'
 import type { ActionProtocol } from '../lib/actionProtocol'
 import type { ModelConfig } from '../lib/openAiTypes'
+import type { PromptGroup } from '../lib/promptGroups'
 import { ConfigRail, type ConfigRailItem } from './ConfigRail'
 import { CONFIG_TARGET_IDS, type ConfigTarget } from './configTargets'
 import { DeviceHomeOptionsSection } from './DeviceHomeOptionsSection'
@@ -42,6 +43,9 @@ export type ConfigSidebarProps = {
   onToggleOpen: () => void
   screenBlackoutDuringAutoControl: boolean
   streamResponses: boolean
+  activePromptGroupId: string
+  promptGroups: readonly PromptGroup[]
+  onActivePromptGroupIdChange: (id: string) => void
 }
 
 export function ConfigSidebar({
@@ -64,6 +68,9 @@ export function ConfigSidebar({
   onToggleOpen,
   screenBlackoutDuringAutoControl,
   streamResponses,
+  activePromptGroupId,
+  promptGroups,
+  onActivePromptGroupIdChange,
 }: ConfigSidebarProps) {
   const railItems: ConfigRailItem<ConfigTarget>[] = [
     { icon: Bot, label: copy.model, target: 'model' },
@@ -110,6 +117,9 @@ export function ConfigSidebar({
               onStreamResponsesChange={onStreamResponsesChange}
               onTestConnectivity={onTestConnectivity}
               streamResponses={streamResponses}
+              activePromptGroupId={activePromptGroupId}
+              promptGroups={promptGroups}
+              onActivePromptGroupIdChange={onActivePromptGroupIdChange}
             />
           </section>
 

@@ -10,6 +10,7 @@ import {
   type ActionProtocol,
 } from './actionProtocol'
 import { isActionToolName, type ActionToolName } from './toolRegistry'
+import { DEFAULT_PROMPT_GROUP_ID } from './promptGroups'
 
 export type ThemeMode = 'system' | 'light' | 'dark'
 export type LanguageMode = 'system' | 'zh-CN' | 'en-US'
@@ -31,6 +32,7 @@ export type AppSettings = {
   keyboardStepMs: number
   themeMode: ThemeMode
   languageMode: LanguageMode
+  activePromptGroupId: string
 }
 
 export type SettingsStorage = Pick<Storage, 'getItem' | 'setItem'>
@@ -67,6 +69,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   keyboardStepMs: 1000,
   themeMode: 'system',
   languageMode: 'system',
+  activePromptGroupId: DEFAULT_PROMPT_GROUP_ID,
 }
 
 export function loadSettings(storage: SettingsStorage = localStorage): AppSettings {
@@ -148,6 +151,10 @@ function normalizeSettings(candidate: unknown): AppSettings {
     keyboardStepMs: readRangeNumber(candidate.keyboardStepMs, DEFAULT_SETTINGS.keyboardStepMs, 100, 5000),
     themeMode: readThemeMode(candidate.themeMode, DEFAULT_SETTINGS.themeMode),
     languageMode: readLanguageMode(candidate.languageMode, DEFAULT_SETTINGS.languageMode),
+    activePromptGroupId: readString(
+      candidate.activePromptGroupId,
+      DEFAULT_SETTINGS.activePromptGroupId,
+    ),
   }
 }
 

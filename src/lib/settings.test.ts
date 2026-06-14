@@ -51,6 +51,7 @@ describe('settings persistence', () => {
       keyboardStepMs: 450,
       themeMode: 'dark',
       languageMode: 'zh-CN',
+      activePromptGroupId: 'custom-group',
     }
 
     expect(

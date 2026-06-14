@@ -74,6 +74,8 @@ describe('useAgentRunController', () => {
         memoryEnabled: false,
         memoryItems: [],
         modelConfig: { baseUrl: 'https://api.example.com/v1', apiKey: 'key', model: 'm' },
+        activePromptGroupId: 'default',
+        promptGroups: [],
         onMemoryItem: vi.fn(),
         pendingStep: null,
         runTask: async (_id, _label, action) => {

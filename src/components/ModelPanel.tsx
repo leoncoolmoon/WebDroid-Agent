@@ -2,6 +2,7 @@ import { useId, useState } from 'react'
 import { Bot, Eye, EyeOff } from 'lucide-react'
 import type { AppCopy } from '../lib/appCopy'
 import type { ActionProtocol } from '../lib/actionProtocol'
+import { DEFAULT_PROMPT_GROUP_ID, type PromptGroup } from '../lib/promptGroups'
 import {
   MODEL_PROVIDER_VALUES,
   PROVIDER_DEFAULTS,
@@ -19,6 +20,9 @@ export type ModelPanelProps = {
   onStreamResponsesChange: (value: boolean) => void
   onTestConnectivity: () => void
   streamResponses: boolean
+  activePromptGroupId: string
+  promptGroups: readonly PromptGroup[]
+  onActivePromptGroupIdChange: (id: string) => void
 }
 
 export function ModelPanel({
@@ -31,6 +35,9 @@ export function ModelPanel({
   onStreamResponsesChange,
   onTestConnectivity,
   streamResponses,
+  activePromptGroupId,
+  promptGroups,
+  onActivePromptGroupIdChange,
 }: ModelPanelProps) {
   const apiKeyInputId = useId()
   const modelDatalistId = useId()
@@ -178,6 +185,20 @@ export function ModelPanel({
               <option value="medium">{copy.reasoningEffortMedium}</option>
               <option value="high">{copy.reasoningEffortHigh}</option>
               <option value="xhigh">{copy.reasoningEffortXHigh}</option>
+            </select>
+          </label>
+          <label>
+            {copy.activePromptGroup}
+            <select
+              value={activePromptGroupId}
+              onChange={(event) => onActivePromptGroupIdChange(event.target.value)}
+            >
+              <option value={DEFAULT_PROMPT_GROUP_ID}>{copy.defaultPromptGroup}</option>
+              {promptGroups.map((group) => (
+                <option key={group.id} value={group.id}>
+                  {group.name}
+                </option>
+              ))}
             </select>
           </label>
           <label>

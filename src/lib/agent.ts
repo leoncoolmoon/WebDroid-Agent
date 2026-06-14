@@ -102,6 +102,7 @@ export type RunAgentStepInput = {
   memoryItems?: readonly string[]
   actionTools?: Record<string, ActionToolSignature>
   index?: number
+  customSystemPrompt?: string
   onSnapshot?: (snapshot: AgentDeviceSnapshot) => void | Promise<void>
   signal?: AbortSignal
 }
@@ -134,6 +135,7 @@ export type AgentRunnerInput = {
   memoryEnabled?: boolean
   memoryItems?: readonly string[]
   onMemoryItem?: (information: string) => void
+  customSystemPrompt?: string
   signal?: AbortSignal
   onSnapshot?: (snapshot: AgentDeviceSnapshot) => void | Promise<void>
   onStep?: (step: AgentStep) => void
@@ -264,12 +266,14 @@ export async function recordAgentFinalResponse({
   session,
   signal,
   task,
+  customSystemPrompt,
 }: {
   client: OpenAiClient
   modelConfig: ModelConfig
   session: AgentSession
   signal?: AbortSignal
   task: string
+  customSystemPrompt?: string
 }) {
   throwIfAborted(signal)
   const fallback = session.progressSummary.trim() || 'Task completed.'
@@ -288,6 +292,7 @@ export async function recordAgentFinalResponse({
               currentApp: session.currentApp,
               deviceState: session.deviceState,
               progressSummary: session.progressSummary,
+              customSystemPrompt,
               signal,
             }),
             signal,
@@ -324,6 +329,7 @@ export async function runAgentStep({
   secrets,
   signal,
   unrestrictedMode,
+  customSystemPrompt,
 }: RunAgentStepInput): Promise<AgentStep> {
   throwIfAborted(signal)
   const startedAt = now()
@@ -408,6 +414,7 @@ export async function runAgentStep({
     secrets: promptSecrets,
     promptContext,
     unrestrictedMode,
+    customSystemPrompt,
     signal,
   }
   let modelOutput = await completeActionWithEmptyContentRetry(client, completionRequest)
@@ -587,6 +594,7 @@ export function createAgentRunner({
             secrets: input.secrets,
             signal: input.signal,
             unrestrictedMode: input.unrestrictedMode,
+            customSystemPrompt: input.customSystemPrompt,
           })
         } catch (caught) {
           if (input.signal?.aborted || isAbortError(caught)) {
@@ -615,6 +623,7 @@ export function createAgentRunner({
               session,
               signal: input.signal,
               task: input.task,
+              customSystemPrompt: input.customSystemPrompt,
             })
             await withAbort(Promise.resolve(input.onFinalResponse?.(finalResponse)), input.signal)
             return { status: 'done', steps, finalResponse }

@@ -4,6 +4,7 @@ import {
   Boxes,
   CircleAlert,
   Code2,
+  Download,
   ExternalLink,
   FileKey2,
   GitFork,
@@ -13,6 +14,8 @@ import {
   ListChecks,
   MessageSquareX,
   PanelTop,
+  Pencil,
+  Plus,
   RotateCcw,
   Search,
   ScrollText,
@@ -20,13 +23,22 @@ import {
   Star,
   SunMoon,
   Tag,
+  Trash2,
+  Upload,
   Wrench,
   X,
   type LucideIcon,
 } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
+import '../styles/settings-dialog.css'
 import type { AppCopy } from '../lib/appCopy'
 import { REPOSITORY_URL, type RepositoryStats } from '../lib/repository'
+import {
+  parsePromptGroupsJson,
+  serializePromptGroup,
+  serializePromptGroups,
+  type PromptGroup,
+} from '../lib/promptGroups'
 import {
   MIN_AGENT_STEPS,
   type LanguageMode,
@@ -62,6 +74,8 @@ export type SettingsDialogProps = {
   secretRecordsJson: string
   secretRecordsJsonError: string | null
   themeMode: ThemeMode
+  promptGroups: readonly PromptGroup[]
+  onPromptGroupsChange: (groups: PromptGroup[]) => void
 }
 
 type SettingsTabId = 'preferences' | 'resources' | 'data' | 'project'
@@ -105,6 +119,8 @@ export function SettingsDialog({
   secretRecordsJson,
   secretRecordsJsonError,
   themeMode,
+  promptGroups,
+  onPromptGroupsChange,
 }: SettingsDialogProps) {
   const [activeTab, setActiveTab] = useState<SettingsTabId>('preferences')
   const settingsTabs: SettingsTab[] = [
@@ -309,6 +325,11 @@ export function SettingsDialog({
                   aria-label={copy.settingsResources}
                 >
                   <div className="settings-resource-grid">
+                    <PromptGroupSection
+                      copy={copy}
+                      groups={promptGroups}
+                      onChange={onPromptGroupsChange}
+                    />
                     <ActionToolAvailabilitySection
                       copy={copy}
                       disabledActionTools={disabledActionTools}
@@ -544,6 +565,181 @@ function ActionToolAvailabilitySection({
       </div>
     </section>
   )
+}
+
+type PromptGroupSectionProps = {
+  copy: AppCopy
+  groups: readonly PromptGroup[]
+  onChange: (groups: PromptGroup[]) => void
+}
+
+function PromptGroupSection({ copy, groups, onChange }: PromptGroupSectionProps) {
+  const [editingGroup, setEditingGroup] = useState<PromptGroup | null>(null)
+
+  function handleAdd() {
+    setEditingGroup({
+      id: crypto.randomUUID(),
+      name: copy.promptGroupDefaultName,
+      systemPrompt: '',
+    })
+  }
+
+  function handleEdit(group: PromptGroup) {
+    setEditingGroup({ ...group })
+  }
+
+  function handleDelete(id: string) {
+    if (confirm(copy.confirmDeletePromptGroup)) {
+      onChange(groups.filter((g) => g.id !== id))
+    }
+  }
+
+  function handleSave() {
+    if (editingGroup) {
+      const exists = groups.some((g) => g.id === editingGroup.id)
+      if (exists) {
+        onChange(groups.map((g) => (g.id === editingGroup.id ? editingGroup : g)))
+      } else {
+        onChange([...groups, editingGroup])
+      }
+      setEditingGroup(null)
+    }
+  }
+
+  function handleExportAll() {
+    const json = serializePromptGroups([...groups])
+    downloadJson(json, 'prompt-groups.json')
+  }
+
+  function handleExportGroup(group: PromptGroup) {
+    const json = serializePromptGroup(group)
+    downloadJson(json, `prompt-group-${group.name}.json`)
+  }
+
+  function handleImport() {
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.accept = 'application/json'
+    input.onchange = async (event) => {
+      const file = (event.target as HTMLInputElement).files?.[0]
+      if (file) {
+        const text = await file.text()
+        try {
+          const imported = parsePromptGroupsJson(text)
+          const nextGroups = [...groups]
+          for (const item of imported) {
+            const index = nextGroups.findIndex((g) => g.id === item.id)
+            if (index >= 0) {
+              nextGroups[index] = item
+            } else {
+              nextGroups.push(item)
+            }
+          }
+          onChange(nextGroups)
+        } catch (caught) {
+          alert(copy.promptGroupJsonError + ': ' + caught)
+        }
+      }
+    }
+    input.click()
+  }
+
+  return (
+    <section
+      className="settings-resource-management settings-prompt-groups"
+      aria-label={copy.promptGroups}
+    >
+      <div className="settings-resource-title">
+        <ScrollText size={16} />
+        <span>{copy.promptGroups}</span>
+        <div className="settings-resource-actions">
+          <button type="button" onClick={handleAdd} title={copy.addPromptGroup}>
+            <Plus size={15} />
+            {copy.addPromptGroup}
+          </button>
+          <button type="button" onClick={handleImport} title={copy.importPromptGroups}>
+            <Upload size={15} />
+            {copy.importPromptGroups}
+          </button>
+          <button type="button" onClick={handleExportAll} title={copy.exportPromptGroups}>
+            <Download size={15} />
+            {copy.exportPromptGroups}
+          </button>
+        </div>
+      </div>
+
+      <div className="settings-tool-list">
+        {groups.map((group) => (
+          <div className="prompt-group-row" key={group.id}>
+            <div className="prompt-group-info">
+              <strong>{group.name}</strong>
+            </div>
+            <div className="prompt-group-actions">
+              <button
+                type="button"
+                onClick={() => handleExportGroup(group)}
+                title={copy.exportSelectedGroup}
+              >
+                <Download size={14} />
+              </button>
+              <button type="button" onClick={() => handleEdit(group)} title={copy.editPromptGroup}>
+                <Pencil size={14} />
+              </button>
+              <button
+                type="button"
+                className="danger"
+                onClick={() => handleDelete(group.id)}
+                title={copy.deletePromptGroup}
+              >
+                <Trash2 size={14} />
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {editingGroup ? (
+        <div className="prompt-group-editor-overlay" onClick={() => setEditingGroup(null)}>
+          <div className="prompt-group-editor-modal" onClick={(e) => e.stopPropagation()}>
+            <h3>{copy.managePromptGroups}</h3>
+            <label>
+              {copy.promptGroupName}
+              <input
+                type="text"
+                value={editingGroup.name}
+                onChange={(e) => setEditingGroup({ ...editingGroup, name: e.target.value })}
+              />
+            </label>
+            <label>
+              {copy.promptGroupSystemPrompt}
+              <textarea
+                value={editingGroup.systemPrompt}
+                onChange={(e) => setEditingGroup({ ...editingGroup, systemPrompt: e.target.value })}
+              />
+            </label>
+            <div className="prompt-group-editor-actions">
+              <button type="button" onClick={() => setEditingGroup(null)}>
+                {copy.cancel}
+              </button>
+              <button type="button" className="primary" onClick={handleSave}>
+                {copy.finish}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </section>
+  )
+}
+
+function downloadJson(json: string, filename: string) {
+  const blob = new Blob([json], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const anchor = document.createElement('a')
+  anchor.href = url
+  anchor.download = filename
+  anchor.click()
+  URL.revokeObjectURL(url)
 }
 
 type ResourceEditorProps = {

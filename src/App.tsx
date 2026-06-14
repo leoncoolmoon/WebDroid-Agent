@@ -33,6 +33,7 @@ import {
   serializeCustomToolDefinitions,
   serializeSecretRecords,
 } from './lib/agentResources'
+import { loadPromptGroups, savePromptGroups } from './lib/promptGroups'
 import { useAgentRunController } from './hooks/useAgentRunController'
 import { useConfigTargetScroll } from './hooks/useConfigTargetScroll'
 import { useDeviceController } from './hooks/useDeviceController'
@@ -106,6 +107,8 @@ function App() {
   const [streamResponses, setStreamResponses] = useState(settings.streamResponses)
   const [themeMode, setThemeMode] = useState(settings.themeMode)
   const [languageMode, setLanguageMode] = useState(settings.languageMode)
+  const [promptGroups, setPromptGroups] = useState(() => loadPromptGroups())
+  const [activePromptGroupId, setActivePromptGroupId] = useState(settings.activePromptGroupId)
   const [configSidebarOpen, setConfigSidebarOpen] = useState(true)
   const openConfigTarget = useConfigTargetScroll(configSidebarOpen, setConfigSidebarOpen)
   const [pendingStep, setPendingStep] = useState<AgentStep | null>(null)
@@ -181,6 +184,7 @@ function App() {
       keyboardStepMs,
       themeMode,
       languageMode,
+      activePromptGroupId,
     }),
     [
       actionProtocol,
@@ -199,6 +203,7 @@ function App() {
       streamResponses,
       themeMode,
       unrestrictedMode,
+      activePromptGroupId,
     ],
   )
   useDocumentPreferences(themeMode, activeLocale)
@@ -223,6 +228,7 @@ function App() {
   useEffect(() => saveAppCards(appCards), [appCards])
   useEffect(() => saveSecretRecords(secretRecords), [secretRecords])
   useEffect(() => saveCustomToolDefinitions(customTools), [customTools])
+  useEffect(() => savePromptGroups(promptGroups), [promptGroups])
   const rememberMemory = useCallback((information: string) => {
     setMemoryItems((current) => {
       const next = rememberMemoryItem(current, information)
@@ -274,6 +280,8 @@ function App() {
     memoryEnabled,
     memoryItems,
     modelConfig,
+    activePromptGroupId,
+    promptGroups,
     onMemoryItem: rememberMemory,
     pendingStep,
     runTask,
@@ -494,6 +502,8 @@ function App() {
             secretRecordsJson={secretRecordsJson}
             secretRecordsJsonError={secretRecordsJsonError}
             themeMode={themeMode}
+            promptGroups={promptGroups}
+            onPromptGroupsChange={setPromptGroups}
           />
         ) : null}
 
@@ -544,6 +554,9 @@ function App() {
           onToggleOpen={() => setConfigSidebarOpen((current) => !current)}
           screenBlackoutDuringAutoControl={screenBlackoutDuringAutoControl}
           streamResponses={streamResponses}
+          activePromptGroupId={activePromptGroupId}
+          promptGroups={promptGroups}
+          onActivePromptGroupIdChange={setActivePromptGroupId}
         />
 
         <div className="phone-column">

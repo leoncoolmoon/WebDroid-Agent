@@ -116,6 +116,7 @@ export type CompletionRequest = ModelConfig & {
   customTools?: readonly CustomToolDescriptor[]
   secrets?: readonly SecretDescriptor[]
   unrestrictedMode?: boolean
+  customSystemPrompt?: string
   signal?: AbortSignal
 }
 
@@ -134,6 +135,7 @@ export type FinalResponseRequest = ModelConfig & {
   currentApp?: string
   deviceState?: DeviceState
   progressSummary?: string
+  customSystemPrompt?: string
   signal?: AbortSignal
 }
 
