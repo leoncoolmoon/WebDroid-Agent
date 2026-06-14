@@ -1,5 +1,5 @@
 import { useId, useState } from 'react'
-import { Bot, Eye, EyeOff, List } from 'lucide-react'
+import { Bot, Eye, EyeOff } from 'lucide-react'
 import type { AppCopy } from '../lib/appCopy'
 import type { ActionProtocol } from '../lib/actionProtocol'
 import {
@@ -33,21 +33,14 @@ export function ModelPanel({
   streamResponses,
 }: ModelPanelProps) {
   const apiKeyInputId = useId()
+  const modelListId = useId()
   const [fetchedModels, setFetchedModels] = useState<string[]>([])
   const [isFetchingModels, setIsFetchingModels] = useState(false)
   const [fetchError, setFetchError] = useState(false)
   const [apiKeyVisible, setApiKeyVisible] = useState(false)
-  const [isManualModel, setIsManualModel] = useState(false)
   const apiKeyVisibilityLabel = apiKeyVisible ? copy.hideApiKey : copy.showApiKey
 
   const allSuggestedModels = Array.from(new Set(fetchedModels))
-
-  const showManualInput =
-    isManualModel ||
-    (allSuggestedModels.length === 0 && modelConfig.model !== '') ||
-    (allSuggestedModels.length > 0 &&
-      !allSuggestedModels.includes(modelConfig.model) &&
-      modelConfig.model !== '')
 
   return (
     <>
@@ -59,52 +52,19 @@ export function ModelPanel({
         <div className="model-box-main">
           <div className="model-name-setting">
             <div className="model-name-field">
-              {showManualInput ? (
-                <input
-                  aria-label={copy.model}
-                  value={modelConfig.model}
-                  onChange={(event) => onModelConfigChange('model', event.target.value)}
-                  placeholder="vision-model"
-                  autoComplete="off"
-                />
-              ) : (
-                <select
-                  aria-label={copy.model}
-                  value={modelConfig.model}
-                  onChange={(event) => {
-                    if (event.target.value === '__manual__') {
-                      setIsManualModel(true)
-                    } else {
-                      onModelConfigChange('model', event.target.value)
-                    }
-                  }}
-                >
-                  <option value="" disabled>
-                    {copy.noModel}
-                  </option>
-                  {allSuggestedModels.map((m) => (
-                    <option key={m} value={m}>
-                      {m}
-                    </option>
-                  ))}
-                  <option value="__manual__">{copy.manualModelEntry}...</option>
-                </select>
-              )}
-              {showManualInput && (
-                <button
-                  type="button"
-                  className="secondary-button"
-                  onClick={() => {
-                    setIsManualModel(false)
-                    if (!allSuggestedModels.includes(modelConfig.model)) {
-                      onModelConfigChange('model', '')
-                    }
-                  }}
-                  title={copy.selectModelFromList}
-                >
-                  <List size={16} />
-                </button>
-              )}
+              <input
+                aria-label={copy.model}
+                value={modelConfig.model}
+                onChange={(event) => onModelConfigChange('model', event.target.value)}
+                placeholder="vision-model"
+                autoComplete="off"
+                list={modelListId}
+              />
+              <datalist id={modelListId}>
+                {allSuggestedModels.map((m) => (
+                  <option key={m} value={m} />
+                ))}
+              </datalist>
               {onFetchModels ? (
                 <button
                   type="button"
