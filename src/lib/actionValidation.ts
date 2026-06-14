@@ -59,14 +59,18 @@ function validateActionAtDepth(
       return withReason(packageName ? { action, app, packageName } : { action, app }, candidate)
     }
     case 'tap': {
-      const { x, y } = readPoint(candidate, screen)
-      assertPointWithinScreen(x, y, screen)
+      const point = readPoint(candidate, screen)
+      const { x, y } = clampPointToScreen(point.x, point.y, screen)
       return withTapMetadata({ action, x, y }, candidate)
     }
     case 'swipe': {
-      const { fromX, fromY, toX, toY } = readSwipePoints(candidate, screen)
-      assertPointWithinScreen(fromX, fromY, screen)
-      assertPointWithinScreen(toX, toY, screen)
+      const points = readSwipePoints(candidate, screen)
+      const from = clampPointToScreen(points.fromX, points.fromY, screen)
+      const to = clampPointToScreen(points.toX, points.toY, screen)
+      const fromX = from.x
+      const fromY = from.y
+      const toX = to.x
+      const toY = to.y
       const defaultDurationMs = 'coordinate' in candidate && 'coordinate2' in candidate ? 1000 : 400
       const durationMs = readSwipeDurationMs(candidate, defaultDurationMs)
       return withReason({ action, fromX, fromY, toX, toY, durationMs }, candidate)
@@ -124,15 +128,15 @@ function validateActionAtDepth(
     case 'home':
       return withReason({ action }, candidate)
     case 'long_press': {
-      const { x, y } = readPoint(candidate, screen)
-      assertPointWithinScreen(x, y, screen)
+      const point = readPoint(candidate, screen)
+      const { x, y } = clampPointToScreen(point.x, point.y, screen)
       const defaultDurationMs = rawAction === 'long_press_at' ? 1000 : 800
       const durationMs = readLongPressDurationMs(candidate, defaultDurationMs)
       return withReason({ action, x, y, durationMs }, candidate)
     }
     case 'double_tap': {
-      const { x, y } = readPoint(candidate, screen)
-      assertPointWithinScreen(x, y, screen)
+      const point = readPoint(candidate, screen)
+      const { x, y } = clampPointToScreen(point.x, point.y, screen)
       return withReason({ action, x, y }, candidate)
     }
     case 'wait': {
@@ -232,15 +236,14 @@ function validateActionAtDepth(
   }
 }
 
-function assertPointWithinScreen(x: number, y: number, screen?: ScreenSize) {
+function clampPointToScreen(x: number, y: number, screen?: ScreenSize): { x: number; y: number } {
   if (!screen) {
-    return
+    return { x, y }
   }
 
-  if (x < 0 || y < 0 || x >= screen.width || y >= screen.height) {
-    throw new ActionValidationError(
-      `Point (${x}, ${y}) is outside the current screen ${screen.width}x${screen.height}.`,
-    )
+  return {
+    x: clamp(x, 0, screen.width - 1),
+    y: clamp(y, 0, screen.height - 1),
   }
 }
 

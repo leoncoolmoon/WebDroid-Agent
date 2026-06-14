@@ -39,6 +39,7 @@ type ChatPanelProps = {
   copy: AppCopy
   historySidebarOpen: boolean
   pendingStep: AgentStep | null
+  debugMode?: boolean
   sessionSummary?: AgentSessionSummary
   threadSummaries: AgentThreadSummary[]
   onChatInputChange: (value: string) => void
@@ -74,6 +75,7 @@ export function ChatPanel({
   onSubmitChatMessage,
   onToggleHistorySidebar,
   sessionSummary,
+  debugMode,
 }: ChatPanelProps) {
   const chatInputRef = useRef<HTMLTextAreaElement | null>(null)
   const chatStreamRef = useRef<HTMLDivElement | null>(null)
@@ -266,6 +268,7 @@ export function ChatPanel({
               isActive={item.turn.id === activeStepId}
               key={item.id}
               turn={item.turn}
+              debugMode={debugMode}
             />
           ) : (
             <article className={`chat-message ${item.message.role}`} key={item.id}>
@@ -286,6 +289,7 @@ export function ChatPanel({
           <PendingActionCard
             busyTask={busyTask}
             copy={copy}
+            debugMode={debugMode}
             onExecutePendingStep={onExecutePendingStep}
             pendingStep={pendingStep}
           />

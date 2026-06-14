@@ -5,13 +5,19 @@ import type { DeviceControlActions, DeviceControlOptions } from '../lib/deviceCo
 export type DeviceHomeOptionsSectionProps = {
   actions: Pick<
     DeviceControlActions,
-    'onConfirmSensitiveActionsChange' | 'onPreferAdbKeyboardChange' | 'onUnrestrictedModeChange'
+    | 'onConfirmSensitiveActionsChange'
+    | 'onDebugModeChange'
+    | 'onPreferAdbKeyboardChange'
+    | 'onUnrestrictedModeChange'
   >
   copy: AppCopy
   memoryEnabled: boolean
   onMemoryEnabledChange: (value: boolean) => void
   onScreenBlackoutDuringAutoControlChange: (value: boolean) => void
-  options: Pick<DeviceControlOptions, 'confirmSensitiveActions' | 'preferAdbKeyboard' | 'unrestrictedMode'>
+  options: Pick<
+    DeviceControlOptions,
+    'confirmSensitiveActions' | 'debugMode' | 'preferAdbKeyboard' | 'unrestrictedMode'
+  >
   screenBlackoutDuringAutoControl: boolean
 }
 
@@ -55,6 +61,14 @@ export function DeviceHomeOptionsSection({
             onChange={(event) => actions.onUnrestrictedModeChange(event.target.checked)}
           />
           <span>{copy.unrestrictedMode}</span>
+        </label>
+        <label className="toggle" title={copy.debugModeHelp}>
+          <input
+            type="checkbox"
+            checked={options.debugMode}
+            onChange={(event) => actions.onDebugModeChange(event.target.checked)}
+          />
+          <span>{copy.debugMode}</span>
         </label>
         <label className="toggle" title={copy.memoryHelp}>
           <input

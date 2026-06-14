@@ -11,6 +11,7 @@ type PendingActionCardProps = {
   copy: AppCopy
   onExecutePendingStep: () => void
   pendingStep: AgentStep
+  debugMode?: boolean
 }
 
 export function PendingActionCard({
@@ -18,6 +19,7 @@ export function PendingActionCard({
   copy,
   onExecutePendingStep,
   pendingStep,
+  debugMode,
 }: PendingActionCardProps) {
   const actionDisplay = getActionDisplay(pendingStep.action, copy)
   const ActionIcon = actionDisplay.icon
@@ -55,6 +57,12 @@ export function PendingActionCard({
             </span>
           </div>
           <p className="pending-action-preview">{actionPreview}</p>
+          {debugMode && pendingStep.promptContext?.trim() ? (
+            <div className="agent-step-details">
+              <span className="agent-step-detail-title">{copy.stepPromptContext}</span>
+              <pre className="pending-action-debug-pre">{pendingStep.promptContext}</pre>
+            </div>
+          ) : null}
         </div>
       </div>
       <button

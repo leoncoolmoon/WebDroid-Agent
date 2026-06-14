@@ -42,6 +42,7 @@ describe('settings persistence', () => {
       preferAdbKeyboard: true,
       confirmSensitiveActions: false,
       unrestrictedMode: true,
+      debugMode: true,
       screenBlackoutDuringAutoControl: true,
       streamResponses: true,
       disabledActionTools: ['tap', 'open_url'],
