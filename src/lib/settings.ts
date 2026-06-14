@@ -1,4 +1,9 @@
-import { isReasoningEffort, type ModelConfig } from './openAiTypes'
+import {
+  isModelProvider,
+  isReasoningEffort,
+  isResponseFormat,
+  type ModelConfig,
+} from './openAiTypes'
 import {
   DEFAULT_ACTION_PROTOCOL,
   isActionProtocol,
@@ -41,9 +46,11 @@ const LEGACY_MODEL_KEY = 'webadb-demo-model'
 export const DEFAULT_SETTINGS: AppSettings = {
   actionProtocol: DEFAULT_ACTION_PROTOCOL,
   modelConfig: {
+    provider: 'openai',
     baseUrl: 'https://api.openai.com/v1',
     apiKey: '',
-    model: 'gpt-5.5',
+    model: 'gpt-4o',
+    responseFormat: 'json_object',
   },
   maxSteps: 50,
   memoryEnabled: false,
@@ -101,12 +108,18 @@ function normalizeSettings(candidate: unknown): AppSettings {
   return {
     actionProtocol: readActionProtocol(candidate.actionProtocol, DEFAULT_SETTINGS.actionProtocol),
     modelConfig: {
+      provider: isModelProvider(modelConfig.provider)
+        ? modelConfig.provider
+        : DEFAULT_SETTINGS.modelConfig.provider,
       baseUrl: readString(modelConfig.baseUrl, DEFAULT_SETTINGS.modelConfig.baseUrl),
       apiKey: readString(modelConfig.apiKey, DEFAULT_SETTINGS.modelConfig.apiKey),
       model: readString(modelConfig.model, DEFAULT_SETTINGS.modelConfig.model),
       ...(isReasoningEffort(modelConfig.reasoningEffort)
         ? { reasoningEffort: modelConfig.reasoningEffort }
         : {}),
+      responseFormat: isResponseFormat(modelConfig.responseFormat)
+        ? modelConfig.responseFormat
+        : DEFAULT_SETTINGS.modelConfig.responseFormat,
     },
     maxSteps: normalizeMaxSteps(candidate.maxSteps),
     memoryEnabled: readBoolean(candidate.memoryEnabled, DEFAULT_SETTINGS.memoryEnabled),

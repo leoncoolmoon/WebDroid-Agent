@@ -2,7 +2,12 @@ import { useId, useState } from 'react'
 import { Bot, Eye, EyeOff } from 'lucide-react'
 import type { AppCopy } from '../lib/appCopy'
 import type { ActionProtocol } from '../lib/actionProtocol'
-import type { ModelConfig } from '../lib/openAiTypes'
+import {
+  MODEL_PROVIDER_VALUES,
+  PROVIDER_DEFAULTS,
+  type ModelConfig,
+  type ModelProvider,
+} from '../lib/openAiTypes'
 
 export type ModelPanelProps = {
   actionProtocol: ActionProtocol
@@ -49,6 +54,28 @@ export function ModelPanel({
         </div>
         <details className="model-details">
           <summary>{copy.modelSettings}</summary>
+          <label>
+            {copy.provider}
+            <select
+              value={modelConfig.provider ?? 'custom'}
+              onChange={(event) => {
+                const provider = event.target.value as ModelProvider
+                onModelConfigChange('provider', provider)
+                const defaults = PROVIDER_DEFAULTS[provider]
+                if (defaults) {
+                  onModelConfigChange('baseUrl', defaults.baseUrl)
+                  onModelConfigChange('responseFormat', defaults.responseFormat)
+                }
+              }}
+            >
+              {MODEL_PROVIDER_VALUES.map((provider) => (
+                <option key={provider} value={provider}>
+                  {copy.modelProviderNames[provider as keyof typeof copy.modelProviderNames] ||
+                    provider}
+                </option>
+              ))}
+            </select>
+          </label>
           <label>
             {copy.baseUrl}
             <input
@@ -119,6 +146,23 @@ export function ModelPanel({
                 {copy.actionProtocolOpenAutoGlm}
               </option>
               <option value="mobilerun_xml">{copy.actionProtocolMobilerunXml}</option>
+            </select>
+          </label>
+          <label>
+            {copy.jsonResponseFormat}
+            <select
+              value={modelConfig.responseFormat ?? 'none'}
+              onChange={(event) =>
+                onModelConfigChange(
+                  'responseFormat',
+                  event.target.value as ModelConfig['responseFormat'],
+                )
+              }
+            >
+              <option value="none">{copy.responseFormatNone}</option>
+              <option value="json_object">{copy.responseFormatJsonObject}</option>
+              <option value="json_schema">{copy.responseFormatJsonSchema}</option>
+              <option value="ollama_json">{copy.responseFormatOllamaJson}</option>
             </select>
           </label>
           <label className="toggle">

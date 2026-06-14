@@ -538,7 +538,7 @@ describe('buildChatCompletionPayload', () => {
 
   it('passes reasoning effort through to action requests when configured', () => {
     const payload = buildChatCompletionPayload({
-      model: 'gpt-5.5',
+      model: 'gpt-4o',
       reasoningEffort: 'high',
       task: 'Open settings',
       screenshotDataUrl: 'data:image/png;base64,abc123',
