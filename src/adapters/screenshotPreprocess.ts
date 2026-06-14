@@ -177,8 +177,10 @@ function drawCoordinateGrid(
     context.stroke()
 
     if (isMajor) {
-      drawLabel(context, `x=${x}`, Math.min(x + 3, Math.max(4, screen.width - 40)), 4)
-      drawLabel(context, `y=${y}`, 4, Math.min(y + 3, Math.max(4, screen.height - 16)))
+      const labelX = Math.round((index * 1000) / divisions)
+      const labelY = Math.round((index * 1000) / divisions)
+      drawLabel(context, `x=${labelX}`, Math.min(x + 3, Math.max(4, screen.width - 40)), 4)
+      drawLabel(context, `y=${labelY}`, 4, Math.min(y + 3, Math.max(4, screen.height - 16)))
     }
   }
 

@@ -11,9 +11,9 @@ import { buildScreenshotContext } from './screenshot'
 export const DEFAULT_INSTALLED_APPS_PROMPT_LIMIT = 40
 
 export const CANONICAL_COORDINATE_INSTRUCTION = [
-  'Coordinates use pixels in the attached screenshot.',
+  'Coordinates use a normalized 0-1000 scale for both x and y axes.',
   'Use numeric x/y labels on major grid lines as anchors; do not answer with grid-cell numbers.',
-  'Your screenshot coordinates are mapped back to native device pixels before execution.',
+  'Your normalized coordinates are mapped back to native device pixels before execution.',
 ].join(' ')
 
 export type PromptScreenInfoInput = {

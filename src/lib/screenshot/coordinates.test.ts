@@ -40,9 +40,9 @@ describe('buildScreenshotContext', () => {
         deviceScreen: { width: 1080, height: 2316 },
       }),
     ).toEqual({
-      model_screen_size: '716x1536',
+      model_screen_size: '1000x1000',
       device_screen_size: '1080x2316',
-      coordinate_mode: 'screenshot_pixels',
+      coordinate_mode: 'normalized_1000',
       coordinate_origin: 'top_left',
       grid_divisions: 8,
       grid_labels: 'major_lines_only',

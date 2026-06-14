@@ -3,6 +3,7 @@ import type { AgentAction, ExecutableAtomicAction, ScreenSize } from '../actionT
 
 export const MODEL_SCREENSHOT_MAX_SIDE = 1536
 export const MODEL_SCREENSHOT_MIME_TYPE = 'image/jpeg'
+export const NORMALIZED_SCREEN_SIZE: ScreenSize = { width: 1000, height: 1000 }
 export const MODEL_SCREENSHOT_QUALITY = 0.82
 
 export type ModelScreenshotView = {
@@ -57,21 +58,17 @@ export function buildScreenshotContext({
   modelScreen,
   deviceScreen,
 }: ScreenshotContextInput) {
-  const resized =
-    deviceScreen !== undefined &&
-    (deviceScreen.width !== modelScreen.width || deviceScreen.height !== modelScreen.height)
-
   return {
-    model_screen_size: `${modelScreen.width}x${modelScreen.height}`,
+    model_screen_size: '1000x1000',
     ...(deviceScreen
       ? { device_screen_size: `${deviceScreen.width}x${deviceScreen.height}` }
       : {}),
-    coordinate_mode: 'screenshot_pixels',
+    coordinate_mode: 'normalized_1000',
     coordinate_origin: 'top_left',
     grid_divisions: chooseGridDivisions(modelScreen),
     grid_labels: 'major_lines_only',
     execution_mapping: 'model_coordinates_are_mapped_back_to_device_pixels',
-    ...(resized ? { resized: true } : {}),
+    resized: true,
   }
 }
 

@@ -64,6 +64,7 @@ describe('context builder', () => {
     expect(context.text).toContain('Latest user message: Open Bluetooth')
     expect(context.text).toContain('Earlier context: user opened Settings')
     expect(context.text).toContain('"current_app":"Settings"')
+    expect(context.text).toContain('"model_screen_size":"1000x1000"')
     expect(context.text).toContain('"device_screen_size":"1440x3120"')
     expect(context.text).toContain('<app_card>')
     expect(context.text).toContain('Settings App Card')

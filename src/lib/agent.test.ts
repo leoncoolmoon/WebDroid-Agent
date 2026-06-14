@@ -328,7 +328,7 @@ describe('runAgentStep', () => {
       }),
     )
     expect(step.action).toEqual({ action: 'tap', x: 250, y: 500, reason: 'open' })
-    expect(step.executionAction).toEqual({ action: 'tap', x: 500, y: 1000, reason: 'open' })
+    expect(step.executionAction).toEqual({ action: 'tap', x: 250, y: 1000, reason: 'open' })
   })
 
   it('continues with an unknown current app when app detection fails', async () => {
@@ -781,7 +781,7 @@ describe('createAgentRunner', () => {
       maxSteps: 1,
     })
 
-    expect(device.executedActions).toEqual([{ action: 'tap', x: 500, y: 1000 }])
+    expect(device.executedActions).toEqual([{ action: 'tap', x: 250, y: 1000 }])
   })
 
   it('passes runtime action signatures into context and records the executed tool name', async () => {

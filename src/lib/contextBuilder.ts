@@ -22,7 +22,11 @@ import {
   formatInstalledAppsForPrompt,
   formatPromptHistoryItem,
 } from './promptContextFormatting'
-import { mapScreenTreeCoordinates, modelScreenshotView } from './screenshot'
+import {
+  mapScreenTreeCoordinates,
+  modelScreenshotView,
+  NORMALIZED_SCREEN_SIZE,
+} from './screenshot'
 
 const COMPACTED_TURN_EXECUTION_RESULT_MAX_LENGTH = 4000
 const CONTEXT_SUMMARY_MAX_LENGTH = 16000
@@ -94,7 +98,7 @@ export function buildAgentPromptContext({
 
   const modelScreenTree =
     screenTree && deviceScreen
-      ? mapScreenTreeCoordinates(screenTree, deviceScreen, screen)
+      ? mapScreenTreeCoordinates(screenTree, deviceScreen, NORMALIZED_SCREEN_SIZE)
       : screenTree
 
   const lines = [

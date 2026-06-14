@@ -26,7 +26,12 @@ import type {
   PromptScreenshotAttachment,
 } from './openAiTypes'
 import { OpenAiClientError } from './openAiErrors'
-import { compactScreenshotForMemory, mapActionCoordinates, modelScreenshotView } from './screenshot'
+import {
+  compactScreenshotForMemory,
+  mapActionCoordinates,
+  modelScreenshotView,
+  NORMALIZED_SCREEN_SIZE,
+} from './screenshot'
 import { buildAgentPromptContext, compactThreadContext } from './contextBuilder'
 import { truncateRetainedText } from './textRetention'
 import {
@@ -413,7 +418,7 @@ export async function runAgentStep({
   let modelOutput = await completeActionWithEmptyContentRetry(client, completionRequest)
   let modelMs = elapsed(modelStartedAt)
   let parseStartedAt = now()
-  let action = parseActionOrError(modelOutput, modelScreenshot.screen)
+  let action = parseActionOrError(modelOutput, NORMALIZED_SCREEN_SIZE)
   let parseMs = elapsed(parseStartedAt)
 
   if (action instanceof Error) {
@@ -433,11 +438,11 @@ export async function runAgentStep({
     modelMs += elapsed(repairStartedAt)
 
     parseStartedAt = now()
-    action = parseModelAction(modelOutput, modelScreenshot.screen)
+    action = parseModelAction(modelOutput, NORMALIZED_SCREEN_SIZE)
     parseMs += elapsed(parseStartedAt)
   }
 
-  const executionAction = mapActionCoordinates(action, modelScreenshot.screen, screenshot.screen)
+  const executionAction = mapActionCoordinates(action, NORMALIZED_SCREEN_SIZE, screenshot.screen)
   const preview = buildActionPreview(action)
   const timing = {
     captureMs,

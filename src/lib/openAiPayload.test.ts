@@ -205,9 +205,9 @@ describe('buildChatCompletionPayload', () => {
     }
 
     const userText = userMessage.content[0].text
-    expect(userText).toContain('"model_screen_size":"955x2048"')
+    expect(userText).toContain('"model_screen_size":"1000x1000"')
     expect(userText).toContain('"device_screen_size":"1080x2316"')
-    expect(userText).toContain('"coordinate_mode":"screenshot_pixels"')
+    expect(userText).toContain('"coordinate_mode":"normalized_1000"')
     expect(userText).toContain('"grid_divisions":10')
     expect(userText).toContain('major_lines_only')
     expect(userText).toContain('mapped back to native device pixels')

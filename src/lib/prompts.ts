@@ -120,8 +120,8 @@ export function buildSystemPrompt({
     ].join(' '),
     'Use wait with duration in seconds, defaulting to 1.0, for animations, page loads, or time-based operations.',
     [
-      'For canonical JSON touch coordinates, use screenshot pixel coordinates from the attached image.',
-      'Major grid lines may be labeled with x/y pixel values;',
+      'For canonical JSON touch coordinates, use normalized 0-1000 coordinates.',
+      'Major grid lines may be labeled with x/y values;',
       'use those labels as anchors, not grid-cell numbers.',
     ].join(' '),
     'Do not invent shell commands.',
@@ -178,7 +178,7 @@ function buildProtocolInstructions(actionProtocol: ActionProtocol) {
       'Supported mobilerun-style tools:',
       'open_app(text), open_url(url), click_at(x,y), click_area(x1,y1,x2,y2), long_press_at(x,y), swipe(coordinate,coordinate2,duration), type_text(text,clear), set_clipboard(text), paste(), system_button(button), wait(duration), remember(information), view_screenshot(ref,step), type_secret(secret_id,clear), custom_tool(tool,input), complete(success,message).',
       'Use multiple invokes only for short, visible, stable action chains. Prefer a later observation when an action changes the screen.',
-      'Use screenshot pixel coordinates for click_at, click_area, long_press_at, and swipe coordinates.',
+      'Use normalized 0-1000 coordinates for click_at, click_area, long_press_at, and swipe coordinates.',
     ]
   }
 
