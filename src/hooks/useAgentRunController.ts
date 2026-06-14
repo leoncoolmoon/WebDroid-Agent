@@ -200,6 +200,8 @@ export function useAgentRunController({
     streamResponses,
     syncConversation,
     unrestrictedMode,
+    activePromptGroupId,
+    promptGroups,
   ])
 
   const runAutoLoop = useCallback(async () => {

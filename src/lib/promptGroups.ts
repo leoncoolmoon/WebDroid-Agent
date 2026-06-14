@@ -43,15 +43,18 @@ export function parsePromptGroupsJson(json: string): PromptGroup[] {
   return parsed.map(validatePromptGroup)
 }
 
-function validatePromptGroup(item: any): PromptGroup {
+function validatePromptGroup(item: unknown): PromptGroup {
   if (
     typeof item === 'object' &&
     item !== null &&
-    typeof item.id === 'string' &&
-    typeof item.name === 'string' &&
-    typeof item.systemPrompt === 'string'
+    'id' in item &&
+    'name' in item &&
+    'systemPrompt' in item &&
+    typeof (item as { id: unknown }).id === 'string' &&
+    typeof (item as { name: unknown }).name === 'string' &&
+    typeof (item as { systemPrompt: unknown }).systemPrompt === 'string'
   ) {
-    return item as PromptGroup
+    return item as unknown as PromptGroup
   }
   throw new Error('Invalid prompt group format.')
 }
