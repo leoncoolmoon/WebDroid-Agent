@@ -399,7 +399,7 @@ describe('runAgentStep', () => {
   it('repairs invalid model actions once before returning the step', async () => {
     const device = fakeDevice()
     const client = {
-      completeAction: vi.fn(async () => '{"action":"tap","x":9999,"y":200}'),
+      completeAction: vi.fn(async () => '{"action":"invalid_action_name"}'),
       repairAction: vi.fn(async () => '{"action":"tap","x":100,"y":200,"reason":"fixed"}'),
     }
 
@@ -415,8 +415,8 @@ describe('runAgentStep', () => {
     expect(step.preview).toBe('tap (100, 200) - fixed')
     expect(client.repairAction).toHaveBeenCalledWith(
       expect.objectContaining({
-        invalidOutput: '{"action":"tap","x":9999,"y":200}',
-        validationError: expect.stringContaining('outside the current screen'),
+        invalidOutput: '{"action":"invalid_action_name"}',
+        validationError: expect.stringContaining('Unsupported action'),
         screenshotDataUrl: 'data:image/png;base64,abc',
         screen: { width: 1080, height: 2400 },
         currentApp: 'Chrome',

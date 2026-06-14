@@ -89,7 +89,7 @@ export function AgentStepCard({ copy, debugMode, isActive, turn }: AgentStepCard
         ) : null}
         {debugMode && turn.promptContext?.trim() ? (
           <>
-            <span className="agent-step-detail-title">Prompt Context</span>
+            <span className="agent-step-detail-title">{copy.stepPromptContext}</span>
             <pre>{turn.promptContext}</pre>
           </>
         ) : null}

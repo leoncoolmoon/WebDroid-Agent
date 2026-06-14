@@ -59,7 +59,7 @@ export function PendingActionCard({
           <p className="pending-action-preview">{actionPreview}</p>
           {debugMode && pendingStep.promptContext?.trim() ? (
             <div className="agent-step-details">
-              <span className="agent-step-detail-title">Prompt Context</span>
+              <span className="agent-step-detail-title">{copy.stepPromptContext}</span>
               <pre className="pending-action-debug-pre">{pendingStep.promptContext}</pre>
             </div>
           ) : null}

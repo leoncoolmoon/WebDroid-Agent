@@ -366,6 +366,7 @@ export const EN_US_COPY = {
   stepTool: 'Tool',
   stepExecutionResult: 'Execution result',
   stepModelOutput: 'Model output',
+  stepPromptContext: 'Prompt context',
   stepParsedAction: 'Parsed action',
   stepTiming: (totalMs: number) => `Total ${totalMs} ms`,
   stepTimingSeconds: (seconds: number) => `${seconds} s`,

@@ -363,6 +363,7 @@ export const ZH_CN_COPY = {
   stepTool: '工具',
   stepExecutionResult: '执行结果',
   stepModelOutput: '模型输出',
+  stepPromptContext: '提示词上下文',
   stepParsedAction: '解析动作',
   stepTiming: (totalMs: number) => `耗时 ${totalMs} ms`,
   stepTimingSeconds: (seconds: number) => `${seconds} 秒`,
